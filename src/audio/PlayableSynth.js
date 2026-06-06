@@ -178,5 +178,5 @@ export class PlayableSynth {
 
 function isTypingTarget(target) {
   const tag = target?.tagName?.toLowerCase();
-  return ['input', 'select', 'textarea', 'button'].includes(tag) || target?.isContentEditable;
+  return ['input', 'select', 'textarea'].includes(tag) || target?.isContentEditable;
 }
