@@ -1,6 +1,5 @@
 import { ESTADOS, transicionar } from './StateMachine.js';
 import { clamp, lerp, round2, nowMs, randomBetween } from '../utils.js';
-import { clamp, lerp, round2, nowMs, randomBetween } from '../utils.js';
 
 export class Instrumento {
   constructor(id, sala, mapeo, umbrales, pesos) {
