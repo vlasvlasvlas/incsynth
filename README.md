@@ -330,12 +330,13 @@ límites de cada patrón comparten el mismo reloj de audio. La volatilidad puede
 reducir levemente el acento, pero no desplaza ni omite el pulso.
 
 El pulso de medición usa por defecto un timbre electrónico breve. Desde el
-sidebar se pueden cambiar:
+panel de RITMO (dispuesto en una grilla compacta) se pueden cambiar:
 
 - BPM;
 - forma de onda del pulso;
 - frecuencia;
-- volumen.
+- volumen;
+- **bombo (kick) sincronizado opcional**, para aportar mayor tracción rítmica.
 
 La voz de percusión autónoma también utiliza por defecto **Pulso FM**, un ataque
 sintético corto con modulación de frecuencia, en lugar del sonido de madera o
