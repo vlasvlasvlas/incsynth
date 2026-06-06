@@ -487,6 +487,42 @@ select.lente-sel:focus { outline: 1px solid var(--fg); }
   width: 100%;
 }
 .bpm-number-input:focus { outline: 1px solid var(--fg); }
+.ritmo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 0.65rem;
+}
+.ritmo-control {
+  display: grid;
+  grid-template-rows: auto 30px;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.ritmo-control .lente-label {
+  min-width: 0;
+}
+.ritmo-control .bpm-number-input,
+.ritmo-control select.lente-sel {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  box-sizing: border-box;
+}
+.ritmo-pulso-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+.ritmo-pulso-input input[type="range"] {
+  width: 100%;
+  min-width: 0;
+}
+.ritmo-pulso-input .lente-efecto {
+  min-width: 0;
+  text-align: right;
+}
 .noticias-help {
   margin-bottom: 0.45rem;
   font-family: var(--mono);
@@ -924,13 +960,13 @@ body.dark-theme .senal-origen b {
     grid-template-columns: 68px minmax(0, 1fr) 62px;
     min-height: 44px;
   }
-  .ritmo-bpm-row,
-  .ritmo-number-row {
-    display: grid;
-    grid-template-columns: 58px minmax(0, 1fr);
+  .ritmo-control {
+    grid-template-rows: auto 44px;
   }
-  .bpm-number-input {
+  .ritmo-control .bpm-number-input,
+  .ritmo-control select.lente-sel {
     width: 100%;
+    height: 44px;
     text-align: center;
   }
   .sala-panel {

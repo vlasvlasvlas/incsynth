@@ -930,11 +930,13 @@ function createToneSynth(preset) {
 
 // ── BPM y volumen del pulso ──
 function buildRitmoCard(getEngine) {
-  const card = document.createElement('div'); card.className = 'sonido-card';
+  const card = document.createElement('div'); card.className = 'sonido-card ritmo-card';
   const h = document.createElement('h3'); h.textContent = 'RITMO'; card.appendChild(h);
+  const grid = document.createElement('div'); grid.className = 'ritmo-grid';
+  card.appendChild(grid);
 
   // BPM
-  const bpmRow = document.createElement('div'); bpmRow.className = 'lente-row ritmo-bpm-row ritmo-number-row';
+  const bpmRow = document.createElement('div'); bpmRow.className = 'ritmo-control ritmo-bpm-row';
   const bpmLbl = document.createElement('span'); bpmLbl.className = 'lente-label'; bpmLbl.textContent = 'BPM';
   const bpmInput = document.createElement('input');
   bpmInput.type = 'number';
@@ -959,9 +961,9 @@ function buildRitmoCard(getEngine) {
   bpmInput.addEventListener('change', () => applyBpm(bpmInput.value));
   applyBpm(70);
   bpmRow.appendChild(bpmLbl); bpmRow.appendChild(bpmInput);
-  card.appendChild(bpmRow);
+  grid.appendChild(bpmRow);
 
-  const timbreRow = document.createElement('div'); timbreRow.className = 'lente-row';
+  const timbreRow = document.createElement('div'); timbreRow.className = 'ritmo-control';
   const timbreLbl = document.createElement('span'); timbreLbl.className = 'lente-label'; timbreLbl.textContent = 'TIMBRE';
   const timbreSel = document.createElement('select'); timbreSel.className = 'lente-sel';
   [
@@ -979,9 +981,9 @@ function buildRitmoCard(getEngine) {
   timbreSel.addEventListener('change', () => getEngine()?._pulse?.setWaveform(timbreSel.value));
   timbreRow.appendChild(timbreLbl);
   timbreRow.appendChild(timbreSel);
-  card.appendChild(timbreRow);
+  grid.appendChild(timbreRow);
 
-  const freqRow = document.createElement('div'); freqRow.className = 'lente-row ritmo-number-row';
+  const freqRow = document.createElement('div'); freqRow.className = 'ritmo-control';
   const freqLbl = document.createElement('span'); freqLbl.className = 'lente-label'; freqLbl.textContent = 'FREQ';
   const freqInput = document.createElement('input');
   freqInput.type = 'number';
@@ -996,14 +998,14 @@ function buildRitmoCard(getEngine) {
   });
   freqRow.appendChild(freqLbl);
   freqRow.appendChild(freqInput);
-  card.appendChild(freqRow);
+  grid.appendChild(freqRow);
 
   // Volumen del pulso
-  const pulsoRow = document.createElement('div'); pulsoRow.className = 'lente-row';
+  const pulsoRow = document.createElement('div'); pulsoRow.className = 'ritmo-control ritmo-pulso-control';
   const pulsoLbl = document.createElement('span'); pulsoLbl.className = 'lente-label'; pulsoLbl.textContent = 'PULSO';
+  const pulsoControl = document.createElement('div'); pulsoControl.className = 'ritmo-pulso-input';
   const pulsoSlider = document.createElement('input');
   pulsoSlider.type = 'range'; pulsoSlider.min = -40; pulsoSlider.max = 0; pulsoSlider.step = 1; pulsoSlider.value = -18;
-  pulsoSlider.style.flex = '1';
   const pulsoVal = document.createElement('span'); pulsoVal.className = 'lente-efecto'; pulsoVal.textContent = '-18 dB';
   pulsoSlider.addEventListener('input', () => {
     const v = parseInt(pulsoSlider.value);
@@ -1011,8 +1013,11 @@ function buildRitmoCard(getEngine) {
     const eng = getEngine();
     if (eng?._pulse) eng._pulse.setVolume(v);
   });
-  pulsoRow.appendChild(pulsoLbl); pulsoRow.appendChild(pulsoSlider); pulsoRow.appendChild(pulsoVal);
-  card.appendChild(pulsoRow);
+  pulsoControl.appendChild(pulsoSlider);
+  pulsoControl.appendChild(pulsoVal);
+  pulsoRow.appendChild(pulsoLbl);
+  pulsoRow.appendChild(pulsoControl);
+  grid.appendChild(pulsoRow);
 
   return {
     card,
