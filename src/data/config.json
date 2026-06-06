@@ -4,21 +4,21 @@
       "tipo": "PolySynth",
       "nombre": "CUERDAS",
       "descripcion": "Ataque suave · sostenido",
-      "color_hex": "#1a44cc",
+      "color_hex": "#3550ff",
       "fuente_default": "clima"
     },
     "percusion": {
       "tipo": "MembraneSynth",
       "nombre": "PERCUSIÓN",
       "descripcion": "Golpe seco · impulsivo",
-      "color_hex": "#1a7a1a",
+      "color_hex": "#d500f9",
       "fuente_default": "bolsa"
     },
     "melodia": {
       "tipo": "Synth",
       "nombre": "MELODÍA",
       "descripcion": "Figura aguda · puntual",
-      "color_hex": "#111111",
+      "color_hex": "#ffb300",
       "fuente_default": "noticias"
     }
   }
