@@ -30,6 +30,11 @@ export class Instrumento {
     this._lightGain          = 1;
     this._lastManualSignal   = 0;
     this._manualCambio       = 0;
+    this._repeticiones       = 0;
+    this._historialDecisiones = [];
+    this._lastSignalMagnitude = 0;
+    this._signalDelta         = 0;
+    this._patternEnteredAt    = nowMs();
   }
 
   // Conectar array de fuentes: [{ id, tipo, source, mapeo }]
@@ -48,6 +53,9 @@ export class Instrumento {
 
   tick() {
     this._reconstruirSeñalCompuesta();
+    const magnitudActual = this.señal?.magnitud ?? 0;
+    this._signalDelta = magnitudActual - this._lastSignalMagnitude;
+    this._lastSignalMagnitude = magnitudActual;
 
     // Fix de mapeo: usar el mapeo de la fuente primaria como ctx.mapeo
     if (this.fuentes.length > 0 && this.fuentes[0].mapeo) {
@@ -74,6 +82,15 @@ export class Instrumento {
       umbrales:           this.umbrales,
     };
     this.estado = transicionar(this.estado, ctx);
+    const geometria = this.sala.getGeometria();
+    if (
+      this.estado === ESTADOS.RETENIDO
+      && this._repeticiones >= 10
+      && (geometria.estabilidad > 0.75 || geometria.area < 0.055 || Math.abs(this._signalDelta) > 0.06)
+    ) {
+      this.estado = ESTADOS.SONANDO;
+      this._lastDecision = 'SE LIBERA: la repeticion dejo de transformar la sala';
+    }
 
     this._mutaValor = this.señal ? this.señal.getVerb('MUTA', this.mapeo) : 0;
     this._verbos = this.señal ? {
@@ -93,25 +110,62 @@ export class Instrumento {
     if ([ESTADOS.DORMIDO, ESTADOS.ARMADO, ESTADOS.DESCANSANDO, ESTADOS.RETENIDO].includes(this.estado)) {
       this._lastDecision = this.estado === ESTADOS.RETENIDO ? 'RETENIDO: repite patron' : `${this.estado}: no avanza`;
       this.sala.actualizarPosicion(this.id, this.posicion, false);
+      this._registrarDecision(false);
       return false;
     }
 
     const avanzo = Math.random() < breakdown.p;
     if (avanzo) {
       this.posicion++;
+      this._patternEnteredAt = nowMs();
       this.sala.actualizarPosicion(this.id, this.posicion, true);
       this._lastDecision = 'AVANZO al proximo patron';
     } else {
       this.sala.actualizarPosicion(this.id, this.posicion, false);
       this._lastDecision = 'REPITE el patron actual';
     }
+    this._registrarDecision(avanzo);
     return avanzo;
+  }
+
+  forzarAvance(motivo = 'empuje del convocante') {
+    if (this.posicion >= this.sala.numPatrones - 1) return false;
+    this.posicion++;
+    this._patternEnteredAt = nowMs();
+    this.estado = ESTADOS.SONANDO;
+    this.sala.actualizarPosicion(this.id, this.posicion, true);
+    this._lastDecision = `AVANZO: ${motivo}`;
+    this._registrarDecision(true);
+    return true;
+  }
+
+  reiniciarMaduracion() {
+    this._patternEnteredAt = nowMs();
+    this._repeticiones = 0;
+    this._historialDecisiones = [];
   }
 
   getProbabilidadBreakdown() {
     const breakdown = this.sala.calcularProbabilidadBreakdown(
-      this.posicion, this.señal, this.mapeo, this.pesos, this.umbrales
+      this.id,
+      this.posicion,
+      this.señal,
+      this.mapeo,
+      this.pesos,
+      this.umbrales,
+      {
+        repeticiones: this._repeticiones,
+        historial: this._historialDecisiones,
+        signalDelta: this._signalDelta,
+      }
     );
+    const secuencia = this._calcularPresionSecuencia();
+    breakdown.secuencia = round2(secuencia);
+    breakdown.raw = round2((breakdown.raw ?? breakdown.p) + secuencia);
+    breakdown.p = clamp(breakdown.p + secuencia, 0, 1);
+    if (Math.abs(secuencia) > Math.abs(breakdown[breakdown.motivo] ?? 0)) {
+      breakdown.motivo = 'secuencia';
+    }
     const bias = clamp(this._advanceBias ?? 0, -0.45, 0.45);
     breakdown.bias = round2(bias);
     breakdown.raw = round2((breakdown.raw ?? breakdown.p) + bias);
@@ -119,6 +173,7 @@ export class Instrumento {
     if (Math.abs(bias) > Math.abs(breakdown[breakdown.motivo] ?? 0)) {
       breakdown.motivo = bias >= 0 ? 'control' : 'freno_manual';
     }
+    this._aplicarMaduracionTemporal(breakdown);
     return breakdown;
   }
 
@@ -128,6 +183,10 @@ export class Instrumento {
 
   getVolatilidadGlobal() {
     return this.señal ? this.señal.volatilidad : 0;
+  }
+
+  getCanalEscucha() {
+    return this.sala.getEscuchaIndividual(this.id);
   }
 
   getEstadoUI() {
@@ -147,7 +206,57 @@ export class Instrumento {
       brillo:        this._lightGain,
       difusion:      this._glowRadius,
       avanceBias:    this._advanceBias,
+      repeticiones:  this._repeticiones,
+      escucha:       this.getCanalEscucha(),
     };
+  }
+
+  _calcularPresionSecuencia() {
+    let presion = 0;
+    if (this._repeticiones >= 12) {
+      presion += Math.min(0.18, 0.03 + (this._repeticiones - 12) * 0.012);
+    }
+    if (this._repeticiones >= 10 && Math.abs(this._signalDelta) > 0.045) {
+      presion += 0.04;
+    }
+    const recientes = this._historialDecisiones.slice(-10);
+    if (recientes.length >= 10 && recientes.every(v => v === 0)) {
+      presion += 0.05;
+    }
+    return clamp(presion, 0, 0.22);
+  }
+
+  _aplicarMaduracionTemporal(breakdown) {
+    const elapsed = Math.max(0, (nowMs() - this._patternEnteredAt) / 1000);
+    const min = this.umbrales.permanencia_min_s ?? 30;
+    const target = Math.max(min + 1, this.umbrales.permanencia_objetivo_s ?? 46);
+    const max = Math.max(target + 1, this.umbrales.permanencia_max_s ?? 74);
+    const maturity = clamp((elapsed - min) / (target - min), 0, 1);
+    const overdue = clamp((elapsed - target) / (max - target), 0, 1);
+    const demandStart = this.umbrales.avance_demanda_inicial ?? 0.82;
+    const demandMature = this.umbrales.avance_demanda_madura ?? 0.62;
+    const demand = lerp(demandStart, demandMature, maturity);
+    const score = breakdown.p;
+    const qualification = clamp((score - demand) / Math.max(0.01, 1 - demand), 0, 1);
+
+    let p = 0;
+    if (elapsed >= min) {
+      p = qualification * 0.18 + maturity * 0.025 + overdue * 0.42;
+    }
+
+    breakdown.score = round2(score);
+    breakdown.demanda = round2(demand);
+    breakdown.maduracion = round2(maturity);
+    breakdown.permanencia = round2(elapsed);
+    breakdown.p = clamp(p, 0, 0.65);
+    if (elapsed < min) breakdown.motivo = 'maduracion';
+    else if (overdue > 0.5 && breakdown.p > 0.2) breakdown.motivo = 'tiempo';
+  }
+
+  _registrarDecision(avanzo) {
+    this._historialDecisiones.push(avanzo ? 1 : 0);
+    if (this._historialDecisiones.length > 12) this._historialDecisiones.shift();
+    this._repeticiones = avanzo ? 0 : this._repeticiones + 1;
   }
 
   _reconstruirSeñalCompuesta() {
@@ -226,4 +335,8 @@ function lerp(a, b, t) {
 
 function round2(v) {
   return Math.round(v * 100) / 100;
+}
+
+function nowMs() {
+  return typeof performance !== 'undefined' ? performance.now() : Date.now();
 }

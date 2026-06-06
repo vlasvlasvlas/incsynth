@@ -12,16 +12,16 @@
     { "codigo": "CHN", "nombre": "China" }
   ],
   "indicadores": [
-    { "codigo": "GINI",     "nombre": "Desigualdad (GINI)",    "invert": true  },
-    { "codigo": "POVERTY",  "nombre": "Pobreza extrema %",     "invert": true  },
-    { "codigo": "CO2",      "nombre": "CO₂ per cápita",        "invert": true  },
-    { "codigo": "INFANT",   "nombre": "Mortalidad infantil",   "invert": true  },
-    { "codigo": "LIFE",     "nombre": "Expectativa de vida",   "invert": false },
-    { "codigo": "WATER",    "nombre": "Acceso agua potable %", "invert": false },
-    { "codigo": "MILITARY", "nombre": "Gasto militar % PIB",   "invert": true  },
-    { "codigo": "REFUGEES", "nombre": "Refugiados (origen)",   "invert": true  },
-    { "codigo": "LITERACY", "nombre": "Alfabetización %",      "invert": false },
-    { "codigo": "INTERNET", "nombre": "Usuarios internet %",   "invert": false }
+    { "codigo": "GINI",     "worldBankCode": "SI.POV.GINI",       "divisor": 100,     "nombre": "Desigualdad (GINI)",    "invert": true  },
+    { "codigo": "POVERTY",  "worldBankCode": "SI.POV.DDAY",       "divisor": 100,     "nombre": "Pobreza extrema %",     "invert": true  },
+    { "codigo": "CO2",      "worldBankCode": "EN.GHG.CO2.PC.CE.AR5",                 "nombre": "CO₂ per cápita",        "invert": true  },
+    { "codigo": "INFANT",   "worldBankCode": "SP.DYN.IMRT.IN",                       "nombre": "Mortalidad infantil",   "invert": true  },
+    { "codigo": "LIFE",     "worldBankCode": "SP.DYN.LE00.IN",                       "nombre": "Expectativa de vida",   "invert": false },
+    { "codigo": "WATER",    "worldBankCode": "SH.H2O.BASW.ZS",                       "nombre": "Acceso agua potable %", "invert": false },
+    { "codigo": "MILITARY", "worldBankCode": "MS.MIL.XPND.GD.ZS",                    "nombre": "Gasto militar % PIB",   "invert": true  },
+    { "codigo": "REFUGEES", "provider": "unhcr",                   "divisor": 1000000, "nombre": "Refugiados (origen)",   "invert": true  },
+    { "codigo": "LITERACY", "worldBankCode": "SE.ADT.LITR.ZS",                       "nombre": "Alfabetización %",      "invert": false },
+    { "codigo": "INTERNET", "worldBankCode": "IT.NET.USER.ZS",                       "nombre": "Usuarios internet %",   "invert": false }
   ],
   "valores": {
     "ARG": { "GINI":0.42, "POVERTY":0.01, "CO2":4.3, "INFANT":8.9,  "LIFE":76.4, "WATER":99.0, "MILITARY":0.7, "REFUGEES":0.01, "LITERACY":99.0, "INTERNET":74.0 },

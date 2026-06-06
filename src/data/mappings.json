@@ -45,6 +45,11 @@
     "sale": 0.08,
     "desbordado_n": 3,
     "periferico": 0.30,
-    "distancia_max": 4
+    "distancia_max": 4,
+    "permanencia_min_s": 30,
+    "permanencia_objetivo_s": 46,
+    "permanencia_max_s": 74,
+    "avance_demanda_inicial": 0.82,
+    "avance_demanda_madura": 0.62
   }
 }

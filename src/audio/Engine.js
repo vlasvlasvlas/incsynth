@@ -103,6 +103,7 @@ export class AudioEngine {
     let idx = 0;
     for (const id in this.instrumentos) {
       this.instrumentos[id].sala.registrarInstrumento(id, 0);
+      this.instrumentos[id].reiniciarMaduracion?.();
       this._schedulePattern(id, 0.15 + idx * 0.08);
       idx++;
     }

@@ -278,7 +278,9 @@ export class PartituraView {
       const rgb = this._cssToRgb(this.colors.getDotColor(p.inst, sala));
       const prob = p.b?.p ?? 0;
       const world = p.b?.api ?? 0;
-      const room = (p.b?.stigmergy ?? 0) + (p.b?.cohesion ?? 0) + (p.b?.separacion ?? 0) + (p.b?.momentum ?? 0) + (p.b?.shockwave ?? 0) - (p.b?.freno ?? 0);
+      const room = (p.b?.stigmergy ?? 0) + (p.b?.cohesion ?? 0) + (p.b?.separacion ?? 0)
+        + (p.b?.momentum ?? 0) + (p.b?.shockwave ?? 0) + (p.b?.geometria ?? 0)
+        + (p.b?.escucha ?? 0) + (p.b?.secuencia ?? 0) - (p.b?.freno ?? 0);
       const impact = sala.getImpactoShockwave(p.inst.posicion);
       const signal = p.ui.señal || 0;
       const glow = p.inst._glowRadius ?? 1;
@@ -296,9 +298,9 @@ export class PartituraView {
       C.lineTo(C.canvas.width, p.y);
       C.stroke();
 
-      const auraR = 24 + signal * 42 * glow * light;
+      const auraR = 20 + signal * 28 * glow * light;
       const aura = C.createRadialGradient(p.x, p.y, 0, p.x, p.y, auraR);
-      aura.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},${Math.min(0.72, 0.22 + signal * 0.45 * light)})`);
+      aura.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},${Math.min(0.48, 0.14 + signal * 0.30 * light)})`);
       aura.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
       C.fillStyle = aura;
       C.beginPath();
@@ -378,7 +380,8 @@ export class PartituraView {
     C.textAlign = 'center';
     const momentum = Math.round(sala.getMomentum() * 100);
     const dist = sala.getDistanciaMaxima();
-    C.fillText(`momentum ${momentum}% · distancia máxima ${dist} patrones · líneas: escucha/cohesión · banda: zona Riley`, W / 2, H - 42);
+    const geometria = sala.getGeometria();
+    C.fillText(`momentum ${momentum}% · distancia ${dist}p · forma ${geometria.estado} ${Math.round(geometria.area * 100)}% · banda Riley`, W / 2, H - 42);
     C.fillStyle = muted;
     C.fillText('La pieza no avanza por datos solos: avanza por la fricción entre mundo externo y sala compartida.', W / 2, H - 23);
     C.restore();
@@ -434,6 +437,11 @@ function decisionText(p) {
     momentum: 'sigue la corriente del grupo',
     impacto: 'otro avance lo contagia',
     shockwave: 'otro avance lo contagia',
+    geometria: 'la forma común modifica la decisión',
+    escucha: 'escucha el paso de sus vecinos',
+    secuencia: 'la repetición acumulada pide avanzar',
+    maduracion: 'todavía habita este patrón',
+    tiempo: 'el tiempo habitado habilita avanzar',
     freno: 'se frena por alejarse',
     freno_manual: 'freno del convocante',
     control: 'gesto del convocante',

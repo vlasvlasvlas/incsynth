@@ -1,5 +1,164 @@
 // Controles independientes: lente país, noticias y selector de ciudad
 
+export function buildIntervencionCard(instrumentos, callbacks = {}) {
+  const card = document.createElement('div');
+  card.className = 'intervencion-card';
+
+  const h = document.createElement('h3');
+  h.textContent = 'EMPUJAR LA SALA';
+  card.appendChild(h);
+
+  const note = document.createElement('div');
+  note.className = 'intervencion-note';
+  note.textContent = 'Intervenciones breves: alteran el recorrido sin reemplazar la escucha autónoma.';
+  card.appendChild(note);
+
+  const status = document.createElement('div');
+  status.className = 'intervencion-status';
+  status.textContent = 'sala autónoma';
+
+  const grid = document.createElement('div');
+  grid.className = 'intervencion-grid';
+  for (const [id, inst] of Object.entries(instrumentos)) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'intervencion-inst-btn';
+    btn.innerHTML = `<span>${inst._nombre || id}</span><b>+1</b>`;
+    btn.addEventListener('click', () => {
+      const moved = callbacks.onAdvance?.(id);
+      status.textContent = moved === false
+        ? `${inst._nombre || id}: fin de recorrido`
+        : `${inst._nombre || id}: un patrón adelante`;
+    });
+    grid.appendChild(btn);
+  }
+  card.appendChild(grid);
+
+  const actions = document.createElement('div');
+  actions.className = 'intervencion-actions';
+
+  const randomBtn = document.createElement('button');
+  randomBtn.type = 'button';
+  randomBtn.textContent = 'AZAR: AVANZA UNO';
+  randomBtn.addEventListener('click', () => {
+    const result = callbacks.onAdvanceRandom?.();
+    status.textContent = result?.label
+      ? `${result.label}: un patrón adelante`
+      : 'ningún músico pudo avanzar';
+  });
+
+  const redistributeBtn = document.createElement('button');
+  redistributeBtn.type = 'button';
+  redistributeBtn.className = 'primary-intervention';
+  redistributeBtn.textContent = 'REDISTRIBUIR + EMPUJAR';
+  redistributeBtn.addEventListener('click', () => {
+    const result = callbacks.onRedistributeAndPush?.();
+    status.textContent = result || 'fuentes redistribuidas';
+  });
+
+  actions.appendChild(randomBtn);
+  actions.appendChild(redistributeBtn);
+  card.appendChild(actions);
+  card.appendChild(status);
+  return card;
+}
+
+export function buildPlayableSynthCard(synth) {
+  const card = document.createElement('div');
+  card.className = 'playable-synth-card';
+  card.innerHTML = `
+    <div class="playable-synth-head">
+      <h3>SINTE ACOMPAÑANTE</h3>
+      <div class="playable-synth-switches">
+        <button type="button" data-action="power">ON</button>
+        <button type="button" data-action="hold" class="active">HOLD</button>
+        <button type="button" data-action="release">SOLTAR</button>
+      </div>
+    </div>
+    <div class="key-map">
+      ${[
+        ['1 C', 'C4'], ['2 D', 'D4'], ['3 E', 'E4'], ['4 F', 'F4'], ['5 G', 'G4'],
+        ['6 A', 'A4'], ['7 B', 'B4'], ['8 C', 'C5'], ['9 D', 'D5'], ['0 E', 'E5'],
+      ].map(([label, note]) => `<button type="button" data-note="${note}">${label}</button>`).join('')}
+    </div>
+    <div class="synth-control-grid">
+      <label>MODO<select data-param="mode">
+        <option value="synth">SUBTRACTIVO</option>
+        <option value="am">AM</option>
+        <option value="fm">FM</option>
+      </select></label>
+      <label>ONDA<select data-param="waveform">
+        <option value="sine">SENO</option>
+        <option value="triangle">TRIÁNGULO</option>
+        <option value="sawtooth">SIERRA</option>
+        <option value="square">CUADRADA</option>
+      </select></label>
+    </div>
+  `;
+
+  const power = card.querySelector('[data-action="power"]');
+  const hold = card.querySelector('[data-action="hold"]');
+  const release = card.querySelector('[data-action="release"]');
+  power.addEventListener('click', () => synth.setEnabled(!synth.enabled));
+  hold.addEventListener('click', () => synth.setHold(!synth.hold));
+  release.addEventListener('click', () => synth.releaseAll());
+  card.querySelector('[data-param="mode"]').addEventListener('change', event => synth.setMode(event.target.value));
+  card.querySelector('[data-param="waveform"]').addEventListener('change', event => synth.setWaveform(event.target.value));
+  for (const key of card.querySelectorAll('.key-map button')) {
+    key.addEventListener('click', () => synth.playNote(key.dataset.note));
+  }
+
+  const controls = [
+    ['ATAQUE', 'attack', 0.01, 5, 0.01, synth.attack, value => `${value.toFixed(2)}s`],
+    ['DECAY', 'decay', 0.01, 5, 0.01, synth.decay, value => `${value.toFixed(2)}s`],
+    ['SUSTAIN', 'sustain', 0, 1, 0.01, synth.sustain, value => value.toFixed(2)],
+    ['RELEASE', 'release', 0.05, 12, 0.05, synth.release, value => `${value.toFixed(2)}s`],
+    ['FILTRO', 'filter', 120, 12000, 10, synth.filterFrequency, value => `${Math.round(value)}Hz`],
+    ['REVERB', 'reverb', 0, 0.9, 0.01, synth.reverbWet, value => `${Math.round(value * 100)}%`],
+    ['VOLUMEN', 'volume', -36, 0, 1, synth.volume, value => `${Math.round(value)}dB`],
+  ];
+
+  for (const [label, param, min, max, step, initial, format] of controls) {
+    const row = document.createElement('label');
+    row.className = 'playable-range';
+    const name = document.createElement('span');
+    name.textContent = label;
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = min;
+    input.max = max;
+    input.step = step;
+    input.value = initial;
+    const value = document.createElement('b');
+    const apply = () => {
+      const n = Number(input.value);
+      value.textContent = format(n);
+      if (['attack', 'decay', 'sustain', 'release'].includes(param)) synth.setEnvelope(param, n);
+      if (param === 'filter') synth.setFilterFrequency(n);
+      if (param === 'reverb') synth.setReverbWet(n);
+      if (param === 'volume') synth.setVolume(n);
+    };
+    input.addEventListener('input', apply);
+    apply();
+    row.appendChild(name);
+    row.appendChild(input);
+    row.appendChild(value);
+    card.appendChild(row);
+  }
+
+  synth.subscribe(state => {
+    power.classList.toggle('active', state.enabled);
+    power.textContent = state.enabled ? 'ON' : 'OFF';
+    hold.classList.toggle('active', state.hold);
+    for (const key of card.querySelectorAll('.key-map button')) {
+      const pitch = key.dataset.note;
+      key.classList.toggle('active', state.activeNotes.includes(pitch));
+    }
+  });
+
+  return card;
+}
+
 export function buildNoticiasCard(noticiasFuente) {
   const card = document.createElement('div');
   card.className = 'lente-card noticias-card';

@@ -2,6 +2,7 @@ import * as Tone             from 'tone';
 import { LaSala }            from './logic/LaSala.js';
 import { Instrumento }        from './logic/Instrumento.js';
 import { AudioEngine }        from './audio/Engine.js';
+import { PlayableSynth }      from './audio/PlayableSynth.js';
 import { PRESETS, DEFAULTS }  from './audio/presets.js';
 import { OpenMeteoAdapter }   from './data-sources/OpenMeteoAdapter.js';
 import { CoinGeckoAdapter }   from './data-sources/CoinGeckoAdapter.js';
@@ -9,7 +10,14 @@ import { NewsRSSAdapter }     from './data-sources/NewsRSSAdapter.js';
 import { WorldBankAdapter }   from './data-sources/WorldBankAdapter.js';
 import { CircleView }         from './ui/CircleView.js';
 import { PartituraView }      from './ui/PartituraView.js';
-import { buildLenteCard, buildCiudadCard, buildNoticiasCard, buildMercadoCard } from './ui/controls.js';
+import {
+  buildLenteCard,
+  buildCiudadCard,
+  buildNoticiasCard,
+  buildMercadoCard,
+  buildIntervencionCard,
+  buildPlayableSynthCard,
+} from './ui/controls.js';
 import config from './data/config.json';
 import patrones from './data/patterns.json';
 import mappings from './data/mappings.json';
@@ -50,6 +58,7 @@ async function init() {
   const mercadoFuente  = new CoinGeckoAdapter();
   const noticiasFuente = new NewsRSSAdapter();
   const lenteFuente    = new WorldBankAdapter();
+  const playableSynth  = new PlayableSynth();
   climaFuente.start(); mercadoFuente.start(); noticiasFuente.start();
   setInterval(() => { climaFuente.tick(); mercadoFuente.tick(); noticiasFuente.tick(); }, 800);
 
@@ -84,6 +93,17 @@ async function init() {
     sala.registrarInstrumento(id, 0);
     inst.conectarFuentes([{ id: `${fid}_A`, tipo: fid, source: fuentes[fid], mapeo }]);
   }
+
+  const setInstrumentSource = (id, fid) => {
+    const inst = instrumentos[id];
+    const source = fuentes[fid];
+    const mapeo = mappings.fuentes[fid];
+    if (!inst || !source || !mapeo) return false;
+    inst._fuenteId = fid;
+    inst.conectarFuentes([{ id: `${fid}_A`, tipo: fid, source, mapeo }]);
+    inst.tick();
+    return true;
+  };
 
   // ── Vistas Visuales ──
   const mainContainer = document.getElementById('circle-container');
@@ -131,12 +151,34 @@ async function init() {
 
   // ── Panel de control en sidebar ──
   let engine = null;
+  const primaryEl     = document.getElementById('panel-primary');
   const tableroEl     = document.getElementById('panel-tablero');
   const salaPanelRoot = document.createElement('div');
   salaPanelRoot.className = 'sala-panel';
-  tableroEl.appendChild(salaPanelRoot);
   const updateSalaPanel = buildSalaPanel(salaPanelRoot, instIds, instrumentos, sala);
 
+  primaryEl.appendChild(buildIntervencionCard(instrumentos, {
+    onAdvance: id => instrumentos[id]?.forzarAvance('empuje del convocante') ?? false,
+    onAdvanceRandom: () => {
+      const candidates = instIds.filter(id => instrumentos[id].posicion < sala.numPatrones - 1);
+      if (!candidates.length) return null;
+      const id = candidates[Math.floor(Math.random() * candidates.length)];
+      instrumentos[id].forzarAvance('azar dirigido');
+      return { id, label: instrumentos[id]._nombre || id };
+    },
+    onRedistributeAndPush: () => {
+      const sourcePool = Object.keys(fuentes).sort(() => Math.random() - 0.5);
+      instIds.forEach((id, index) => {
+        const fid = sourcePool[index % sourcePool.length];
+        setInstrumentSource(id, fid);
+        instrumentos[id].forzarAvance('cambio de escucha');
+      });
+      return `nueva escucha: ${instIds.map(id => `${instrumentos[id]._nombre}←${instrumentos[id]._fuenteId}`).join(' · ')}`;
+    },
+  }));
+
+  primaryEl.appendChild(buildPlayableSynthCard(playableSynth));
+  primaryEl.appendChild(salaPanelRoot);
 
   // Ciudad
   tableroEl.appendChild(buildCiudadCard((ciudad, lat, lon) => {
@@ -303,6 +345,11 @@ function buildSalaPanel(root, instIds, instrumentos, sala) {
         <div class="concept-copy">Cuando alguien avanza, deja una corriente. Los demás pueden sentir ese arrastre.</div>
         <div class="concept-meter"><span id="concept-momentum"></span></div>
       </div>
+      <div class="concept-card">
+        <div class="concept-title">FORMA</div>
+        <div class="concept-copy">El triángulo entre los músicos respira. Su quietud, expansión o contracción modifica la decisión.</div>
+        <div class="concept-meter"><span id="concept-area"></span></div>
+      </div>
     </div>
     <div class="listening-map" id="listening-map"></div>
     <div class="decision-list" id="decision-list"></div>
@@ -311,6 +358,7 @@ function buildSalaPanel(root, instIds, instrumentos, sala) {
   const huellaEl = root.querySelector('#concept-huella');
   const grupoEl = root.querySelector('#concept-grupo');
   const momentumEl = root.querySelector('#concept-momentum');
+  const areaEl = root.querySelector('#concept-area');
   const listeningEl = root.querySelector('#listening-map');
   const listEl = root.querySelector('#decision-list');
   let last = 0;
@@ -324,10 +372,12 @@ function buildSalaPanel(root, instIds, instrumentos, sala) {
     const centro = sala.getCentroMasa();
     const distancia = sala.getDistanciaMaxima();
     const momentum = sala.getMomentum();
+    const geometria = sala.getGeometria();
 
     setMeter(huellaEl, maxHuella, `max ${maxHuella.toFixed(2)}`);
     setMeter(grupoEl, Math.min(1, distancia / 8), `centro ${(centro + 1).toFixed(1)} · distancia ${distancia}p`);
     setMeter(momentumEl, momentum, `${Math.round(momentum * 100)}%`);
+    setMeter(areaEl, geometria.area, `${geometria.estado} · Δ ${signedPct(geometria.delta)}`);
 
     listeningEl.innerHTML = renderListeningMap(instIds, instrumentos);
 
@@ -341,6 +391,7 @@ function buildSalaPanel(root, instIds, instrumentos, sala) {
       const world = breakdown?.api ?? 0;
       const room = getRoomPressure(breakdown);
       const closest = getClosestInstrument(id, instIds, instrumentos);
+      const escucha = breakdown?.canalEscucha || ui.escucha;
       const estado = ui.estado === 'RETENIDO'
         ? 'retenido: repite el patron'
         : (ui.decision && ui.decision !== 'sin ciclo' ? ui.decision : `${ui.estado}: esperando fin del patron`);
@@ -349,7 +400,8 @@ function buildSalaPanel(root, instIds, instrumentos, sala) {
           <div class="decision-main">
             <span class="decision-name">${escapeHTML(inst._nombre || id)}</span>
             <span class="decision-state">${escapeHTML(humanDecision(estado, motivo, closest))}</span>
-            <span class="decision-pos">patron ${Math.min(inst.posicion + 1, sala.numPatrones)}/${sala.numPatrones} · escucha a ${escapeHTML(closest?.name || 'nadie')}</span>
+            <span class="decision-pos">patrón ${Math.min(inst.posicion + 1, sala.numPatrones)}/${sala.numPatrones} · ${escapeHTML(formatEscuchaIndividual(escucha, instrumentos))}</span>
+            <span class="decision-neighbors">${renderNeighborChannel(escucha, instrumentos)}</span>
           </div>
           <div class="decision-prob">
             <span class="decision-prob-num">${Math.round(p * 100)}%</span>
@@ -375,6 +427,9 @@ function renderBreakdownBars(b) {
     ['separa', b.separacion, '#1a7a1a'],
     ['pulso', b.momentum, '#666'],
     ['impacto', b.shockwave || 0, '#cc8800'],
+    ['forma', b.geometria || 0, '#007f79'],
+    ['escucha', b.escucha || 0, '#9a4f12'],
+    ['secuencia', b.secuencia || 0, '#7a5b22'],
     ['control', b.bias || 0, '#7a35cc'],
     ['freno', -b.freno, '#cc2200'],
   ];
@@ -412,6 +467,11 @@ function readableMotivo(motivo) {
     momentum: 'momentum',
     shockwave: 'impacto',
     impacto: 'impacto',
+    geometria: 'forma de la sala',
+    escucha: 'escucha vecinal',
+    secuencia: 'secuencia',
+    maduracion: 'maduración',
+    tiempo: 'tiempo habitado',
     control: 'control manual',
     freno_manual: 'freno manual',
     freno: 'freno',
@@ -472,6 +532,9 @@ function getRoomPressure(b) {
     + (b.separacion || 0)
     + (b.momentum || 0)
     + (b.shockwave || 0)
+    + (b.geometria || 0)
+    + (b.escucha || 0)
+    + (b.secuencia || 0)
     + (b.bias || 0)
     - (b.freno || 0);
 }
@@ -484,6 +547,11 @@ function humanDecision(estado, motivo, closest) {
   if (motivo === 'destrabe') return `abre espacio para no quedar pegado; ${relation}`;
   if (motivo === 'momentum') return `sigue la corriente colectiva; ${relation}`;
   if (motivo === 'dato externo') return `su mundo externo empuja; ${relation}`;
+  if (motivo === 'forma de la sala') return `la forma común cambió su decisión; ${relation}`;
+  if (motivo === 'escucha vecinal') return `ajusta su paso después de escuchar a los otros; ${relation}`;
+  if (motivo === 'secuencia') return `la repetición acumulada pide transformar el patrón; ${relation}`;
+  if (motivo === 'maduración') return `todavía habita y escucha este patrón; ${relation}`;
+  if (motivo === 'tiempo habitado') return `el tiempo acumulado habilita el avance; ${relation}`;
   if (motivo === 'freno') return `se frena por alejarse demasiado; ${relation}`;
   if (motivo === 'control manual') return `gesto del convocante altera su escucha; ${relation}`;
   return `${estado}; ${relation}`;
@@ -492,6 +560,23 @@ function humanDecision(estado, motivo, closest) {
 function signedPct(v) {
   const n = Math.round(Math.max(-1, Math.min(1, v || 0)) * 100);
   return `${n >= 0 ? '+' : ''}${n}%`;
+}
+
+function formatEscuchaIndividual(escucha, instrumentos) {
+  if (!escucha) return 'sin canal de escucha';
+  const closest = escucha.masCercano;
+  if (!closest) return escucha.rol;
+  const nombre = instrumentos[closest.id]?._nombre || closest.id;
+  return `${escucha.rol} · ${nombre} a ${closest.distancia}p`;
+}
+
+function renderNeighborChannel(escucha, instrumentos) {
+  if (!escucha?.vecinos?.length) return '';
+  return escucha.vecinos.map(vecino => {
+    const nombre = instrumentos[vecino.id]?._nombre || vecino.id;
+    const signo = vecino.delta > 0 ? '+' : '';
+    return `<i class="neighbor-chip ${vecino.direccion}">${escapeHTML(nombre)} ${signo}${vecino.delta}p</i>`;
+  }).join('');
 }
 
 // ── Señal card ──
@@ -560,11 +645,21 @@ function buildSenalCard(instId, fuenteId, cfg, fuente, inst, mapeo) {
   function update() {
     const ui = inst.getEstadoUI();
     const s  = inst.fuentes?.[0]?.source || fuente;
+    const activeFuenteId = inst.fuentes?.[0]?.tipo || inst._fuenteId || fuenteId;
+    const activeMapeo = inst.fuentes?.[0]?.mapeo || inst.mapeo || mapeo;
+    const activeColor = COLORS[activeFuenteId] || '#888';
+    const fuenteLabelEl = hdr.querySelector('.senal-fuente-nome');
+    if (fuenteLabelEl) {
+      fuenteLabelEl.textContent = LABELS[activeFuenteId] || activeFuenteId;
+      fuenteLabelEl.style.color = activeColor;
+    }
 
     const eEl = document.getElementById(`ss-estado-${instId}`);
     if (eEl) { eEl.textContent = ui.estado; eEl.className = `senal-estado-badge ${ui.estado.toLowerCase()}`; }
 
     payloadEl.textContent = s.payloadText || '—';
+    payloadEl.style.color = activeColor;
+    barFl.style.background = activeColor;
     barFl.style.width = `${s.magnitud * 100}%`;
 
     const mEl = document.getElementById(`ss-mag-${instId}`);
@@ -594,16 +689,22 @@ function buildSenalCard(instId, fuenteId, cfg, fuente, inst, mapeo) {
       }
     }
 
-    if (mapeo) {
+    if (activeMapeo) {
       for (const v of ['AVANZA','RETIENE','MUTA','SALE']) {
-        const p = s.getVerb ? s.getVerb(v, mapeo) : 0;
+        const p = s.getVerb ? s.getVerb(v, activeMapeo) : 0;
         chips[v].classList.toggle('activo', p > 0.12);
         chips[v].title = `${v}: ${p.toFixed(2)}`;
         chips[v].textContent = `${v} ${p.toFixed(2)}`;
       }
     }
 
-    detalleEl.innerHTML = renderFuenteDetalle(fuenteId, s, mapeo);
+    const expActual = SOURCE_EXPLAINERS[activeFuenteId];
+    origenEl.innerHTML = expActual ? `
+      <div><b>origen:</b> ${escapeHTML(expActual.origen)}</div>
+      <div><b>influye:</b> ${escapeHTML(expActual.datos)}</div>
+      <div class="senal-formula">${escapeHTML(expActual.formula)}</div>
+    ` : '';
+    detalleEl.innerHTML = renderFuenteDetalle(activeFuenteId, s, activeMapeo);
   }
   return { card, update };
 }

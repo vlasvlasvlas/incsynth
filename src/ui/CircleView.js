@@ -151,7 +151,32 @@ export class CircleView {
       pos[id] = { x, y, inst, r, angle, lblX: cX + Math.cos(angle) * (maxR + 40), lblY: cY + Math.sin(angle) * (maxR + 40) };
     }
 
-    // ── 6. Glows de emanación ──
+    // ── 6. Forma común: triángulo creado por los tres músicos ──
+    const triangle = this.ids.map(id => pos[id]).filter(Boolean).slice(0, 3);
+    if (triangle.length === 3) {
+      const geometria = sala.getGeometria();
+      C.save();
+      C.beginPath();
+      C.moveTo(triangle[0].x, triangle[0].y);
+      C.lineTo(triangle[1].x, triangle[1].y);
+      C.lineTo(triangle[2].x, triangle[2].y);
+      C.closePath();
+      C.fillStyle = isDark ? 'rgba(74,170,164,0.055)' : 'rgba(0,105,100,0.045)';
+      C.fill();
+      C.strokeStyle = isDark ? 'rgba(110,190,184,0.32)' : 'rgba(0,105,100,0.24)';
+      C.lineWidth = 1 + geometria.estabilidad;
+      C.setLineDash(geometria.tendencia === 'estable' ? [4, 5] : []);
+      C.stroke();
+      C.setLineDash([]);
+      C.fillStyle = fgCol;
+      C.globalAlpha = 0.48;
+      C.font = '9px Courier New';
+      C.textAlign = 'center';
+      C.fillText(`forma ${geometria.estado} · área ${Math.round(geometria.area * 100)}%`, cX, cY + 34);
+      C.restore();
+    }
+
+    // ── 7. Emanación contenida ──
     C.save();
     for (const id of this.ids) {
       const p = pos[id]; if (!p) continue;
@@ -162,9 +187,9 @@ export class CircleView {
       const mag = ui.señal || 0;
       if (mag > 0.05 || glowFactor > 1.0) {
         const effMag = Math.max(mag, 0.2);
-        const gR = 12 + effMag * 32 * glowFactor * lightGain;
+        const gR = 10 + effMag * 22 * glowFactor * lightGain;
         const grd = C.createRadialGradient(p.x, p.y, 0, p.x, p.y, gR);
-        grd.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},${Math.min(0.8, effMag * 0.42 * lightGain)})`);
+        grd.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},${Math.min(0.52, effMag * 0.28 * lightGain)})`);
         grd.addColorStop(1, 'rgba(0,0,0,0)');
         C.fillStyle = grd;
         C.beginPath(); C.arc(p.x, p.y, gR, 0, Math.PI*2); C.fill();
@@ -172,7 +197,7 @@ export class CircleView {
     }
     C.restore();
 
-    // ── 7. Hilos de cohesión ──
+    // ── 8. Hilos de cohesión ──
     C.save();
     const active = this.ids.filter(id => pos[id] && instrumentos[id]?.estado !== 'DORMIDO');
     for (let i = 0; i < active.length; i++) {
