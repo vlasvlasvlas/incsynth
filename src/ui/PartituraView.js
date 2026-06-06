@@ -94,7 +94,7 @@ export class PartituraView {
       const pos = this._computePositions(instrumentos, sala, marginX, topY, laneH, stepX, N);
       this._drawListeningLines(C, pos, instrumentos, sala, fgCol, isDark);
       this._drawCenterLine(C, marginX, topY, bottomY, stepX, center, fgCol, mutedCol);
-      this._drawInstruments(C, pos, instrumentos, sala, fgCol, mutedCol, bgCol, N);
+      this._drawInstruments(C, pos, instrumentos, sala, fgCol, mutedCol, bgCol, N, marginX);
       this._drawFooter(C, fgCol, mutedCol, W, H, sala);
     } catch (e) {
       console.error(e);
@@ -276,7 +276,7 @@ export class PartituraView {
     C.restore();
   }
 
-  _drawInstruments(C, pos, instrumentos, sala, fg, muted, bg, N) {
+  _drawInstruments(C, pos, instrumentos, sala, fg, muted, bg, N, marginX) {
     C.save();
     for (const id of this.ids) {
       const p = pos[id];
@@ -346,18 +346,19 @@ export class PartituraView {
       C.fillStyle = fg;
       C.textAlign = 'right';
       C.textBaseline = 'middle';
-      C.font = '700 13px Georgia, serif';
-      C.fillText(p.inst._nombre || id, marginX - 8, p.y - 11);
-      C.font = '10px Courier New, monospace';
+      C.fillStyle = fg;
+      C.font = 'bold 12px sans-serif';
+      C.fillText(`M${this.ids.indexOf(id) + 1}`, marginX - 16, p.y - 8);
       C.fillStyle = muted;
-      C.fillText(`${p.ui.estado} · ${Math.min(p.inst.posicion + 1, N)}/${N}`, marginX - 8, p.y + 8);
+      C.font = '10px sans-serif';
+      C.fillText(`${p.ui.estado} · ${Math.min(p.inst.posicion + 1, N)}/${N}`, marginX - 16, p.y + 8);
 
       C.textAlign = 'left';
       C.fillStyle = fg;
-      C.font = '10px Courier New, monospace';
-      C.fillText(`mundo ${signedPct(world)}   sala ${signedPct(room)}   P ${Math.round(prob * 100)}%`, p.x + 26, p.y - 13);
+      C.font = '10px sans-serif';
+      C.fillText(`mundo ${signedPct(world)}   sala ${signedPct(room)}   P ${Math.round(prob * 100)}%`, p.x + 28, p.y - 8);
       C.fillStyle = muted;
-      C.fillText(decisionText(p), p.x + 26, p.y + 5);
+      C.fillText(decisionText(p), p.x + 28, p.y + 8);
     }
 
     for (let i = this._ripples.length - 1; i >= 0; i--) {
