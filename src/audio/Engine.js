@@ -19,8 +19,8 @@ export class AudioEngine {
     this._pulseEvent = null;
 
     // Reverb compartida contenida para mantener legible la grilla.
-    this._reverb = new Tone.Reverb({ decay: 2.8, wet: 0.18 }).toDestination();
-    this._reverb.generate();
+    this._reverb = new Tone.Reverb({ decay: 2.8, wet: 0.12 }).toDestination();
+    this._reverbReady = this._reverb.generate();
 
     // Construir un synth por instrumento según su preset por defecto
     for (const id in config.instrumentos) {
@@ -100,6 +100,7 @@ export class AudioEngine {
   async start() {
     if (this._running) return;
     await Tone.start();
+    await this._reverbReady; // asegurar que el impulse response esté listo
     this._running = true;
     Tone.Transport.stop();
     Tone.Transport.cancel(0);
@@ -140,7 +141,8 @@ export class AudioEngine {
   _actualizarSintesis() {
     const mom = this.sala.getMomentum();
     // El momentum abre el espacio sin borrar articulación.
-    this._reverb.wet.rampTo(0.18 + mom * 0.24, 0.5);
+    // Rango expresivo: 0.12 (sala seca/quieta) a 0.65 (sala mojada/activa)
+    this._reverb.wet.rampTo(0.12 + mom * 0.53, 0.5);
 
     for (const id in this.instrumentos) {
       const inst = this.instrumentos[id];
@@ -215,7 +217,12 @@ export class AudioEngine {
     let offsetTicks = 0;
 
     for (const ev of patron) {
-      if (ev.nota && ui.estado !== ESTADOS.DESCANSANDO) {
+      // Silencio voluntario: Riley permite descansos internos dentro de un
+      // patrón. El verbo RETIENE modula la probabilidad de omitir notas.
+      const retiene = inst._verbos?.RETIENE ?? 0;
+      const skipChance = retiene * 0.25;
+      const skip = Math.random() < skipChance;
+      if (ev.nota && ui.estado !== ESTADOS.DESCANSANDO && !skip) {
         const noteTick = startTick + offsetTicks;
         const trigger = time => {
           try {

@@ -133,18 +133,10 @@ patrones en pocos minutos.
 
 ### Memoria de repetición
 
-Cada músico conserva un historial corto de sus decisiones.
+El sistema utiliza dos capas de memoria para evaluar el tiempo histórico de los músicos en la obra:
 
-La memoria permite distinguir:
-
-- una repetición reciente que todavía transforma la escucha;
-- una repetición estable que merece continuar;
-- una permanencia prolongada que comienza a estancarse;
-- una secuencia de varios ciclos sin avance;
-- un cambio externo que ocurre después de muchas repeticiones.
-
-La presión antiestancamiento aparece lentamente. No fuerza un avance inmediato:
-se suma como una condición más dentro de la decisión individual.
+1. **Memoria corta (secuencia personal):** El historial reciente de repeticiones y cambios de señal que permite distinguir si una repetición está justificada o se está estancando, pudiendo aportar presión gradual en la decisión individual.
+2. **Memoria larga (huella histórica):** La sala conserva un registro de qué patrones fueron habitados con mayor intensidad durante la pieza (con un tiempo de decaimiento de varios minutos). Un patrón "agotado" presiona a la voz para abandonarlo, mientras que un territorio "fresco" genera atracción natural.
 
 ## Cómo se decide un avance
 
@@ -224,34 +216,32 @@ pueden reducir el puntaje.
 
 El puntaje bruto no se utiliza directamente como probabilidad de avance.
 
-Primero se aplica una **demanda de avance**:
+Primero se aplica la **Maduración temporal**:
 
-- al comienzo del patrón la demanda es alta;
-- la demanda disminuye cuando el patrón madura;
-- antes de la permanencia mínima la probabilidad final es cero;
-- después de una permanencia extensa, el tiempo puede ayudar a liberar el
-  patrón.
+El tiempo habitado funciona como una compuerta o *modulador*, no como un reemplazo de las variables de la sala. Antes de la **permanencia mínima (30s)**, la probabilidad de avance es estrictamente cero. Al superar el **objetivo (46s)**, la compuerta se abre completamente. Finalmente, al excederse hacia la **permanencia máxima (74s)**, se añade un *bonus de urgencia* para evitar el estancamiento permanente.
+
+Esta modulación garantiza que las señales de la sala (geometría, cohesión, stigmergía) y del mundo real decidan *hacia dónde y por qué* se avanza, pero el tiempo determina *cuándo* están autorizados a hacerlo.
 
 El procedimiento general es:
 
 ```text
 datos externos
-  + huella
+  + huella (stigmergía)
   + cohesión
   + separación
   + momentum
   + impacto
   + geometría
   + escucha vecinal
-  + memoria personal
+  + memoria larga
   - frenos
   = puntaje de escucha
 
-puntaje de escucha
-  + tiempo habitado
-  + demanda de maduración
-  = probabilidad final de avance
+probabilidad bruta = puntaje de escucha × maduración temporal × variación de ciclo aleatoria
+probabilidad final = cap_dinámico(probabilidad bruta)
 ```
+
+El límite o *cap dinámico* empieza en 65% (para asegurar fricción al inicio) y crece hacia el 90% a medida que el músico se acerca al patrón 53, favoreciendo una resolución más fluida hacia el clímax de la pieza. Adicionalmente, el sistema contempla **silencios voluntarios**: la señal de retención permite que los intérpretes omitan aleatoriamente la ejecución de algunas notas dentro de un patrón repitente, otorgándole a la pieza una respiración orgánica en lugar de una repetición rígida.
 
 Finalmente se realiza una decisión probabilística. Dos situaciones idénticas
 pueden producir respuestas distintas, pero nunca fuera de las restricciones de

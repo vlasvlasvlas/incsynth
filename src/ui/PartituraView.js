@@ -348,7 +348,8 @@ export class PartituraView {
       C.textBaseline = 'middle';
       C.fillStyle = fg;
       C.font = 'bold 12px sans-serif';
-      C.fillText(`M${this.ids.indexOf(id) + 1}`, marginX - 16, p.y - 8);
+      const _abrev = { cuerdas: 'CUE', percusion: 'PER', melodia: 'MEL' };
+      C.fillText(_abrev[id] || id.slice(0, 3).toUpperCase(), marginX - 16, p.y - 8);
       C.fillStyle = muted;
       C.font = '10px sans-serif';
       C.fillText(`${p.ui.estado} · ${Math.min(p.inst.posicion + 1, N)}/${N}`, marginX - 16, p.y + 8);

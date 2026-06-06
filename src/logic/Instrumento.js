@@ -1,4 +1,6 @@
 import { ESTADOS, transicionar } from './StateMachine.js';
+import { clamp, lerp, round2, nowMs, randomBetween } from '../utils.js';
+import { clamp, lerp, round2, nowMs, randomBetween } from '../utils.js';
 
 export class Instrumento {
   constructor(id, sala, mapeo, umbrales, pesos) {
@@ -237,35 +239,36 @@ export class Instrumento {
     const min = profile.min;
     const target = profile.target;
     const max = profile.max;
-    const maturity = clamp((elapsed - min) / (target - min), 0, 1);
-    const overdue = clamp((elapsed - target) / (max - target), 0, 1);
-    const demandStart = profile.demandStart;
-    const demandMature = profile.demandMature;
-    const demand = lerp(demandStart, demandMature, maturity);
-    const score = breakdown.p;
-    const qualification = clamp((score - demand) / Math.max(0.01, 1 - demand), 0, 1);
-    const cycleVariation = 0.55 + Math.random() * 0.9;
 
-    let p = 0;
-    if (elapsed >= min) {
-      p = (
-        qualification * 0.18
-        + maturity * profile.maturityChance
-        + overdue * profile.overdueChance
-      ) * profile.readiness * cycleVariation;
-    }
+    // Readiness: 0 antes del mínimo, rampa 0→1 entre min y target, 1 después
+    const readiness = elapsed < min ? 0
+      : clamp((elapsed - min) / (target - min), 0, 1);
+
+    // Bonus por tiempo excedido (presión gradual para no estancarse)
+    const overdueBonus = elapsed > target
+      ? clamp((elapsed - target) / (max - target), 0, 1) * 0.25
+      : 0;
+
+    const timeGate = readiness + overdueBonus;
+    const cycleVariation = 0.7 + Math.random() * 0.6; // [0.7, 1.3]
+
+    const score = breakdown.p;
+    // MODULAR: el tiempo amplifica la probabilidad, no la reemplaza
+    let p = score * timeGate * cycleVariation;
+
+    // Cap dinámico: crece con la posición (0.65 al inicio, 0.90 al final)
+    const capDinamico = 0.65 + (this.posicion / this.sala.numPatrones) * 0.25;
 
     breakdown.score = round2(score);
-    breakdown.demanda = round2(demand);
-    breakdown.maduracion = round2(maturity);
+    breakdown.maduracion = round2(readiness);
     breakdown.permanencia = round2(elapsed);
     breakdown.permanenciaMin = round2(min);
     breakdown.permanenciaObjetivo = round2(target);
     breakdown.permanenciaMax = round2(max);
-    breakdown.disposicion = round2(profile.readiness);
-    breakdown.p = clamp(p, 0, 0.65);
+    breakdown.disposicion = round2(timeGate);
+    breakdown.p = clamp(p, 0, capDinamico);
     if (elapsed < min) breakdown.motivo = 'maduracion';
-    else if (overdue > 0.5 && breakdown.p > 0.2) breakdown.motivo = 'tiempo';
+    else if (overdueBonus > 0.1 && breakdown.p > 0.2) breakdown.motivo = 'tiempo';
   }
 
   _registrarDecision(avanzo) {
@@ -340,22 +343,6 @@ function getManualVerb(verbo, magnitud, cambio, muta) {
   }
 }
 
-function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v));
-}
-
-function lerp(a, b, t) {
-  return a + (b - a) * t;
-}
-
-function round2(v) {
-  return Math.round(v * 100) / 100;
-}
-
-function nowMs() {
-  return typeof performance !== 'undefined' ? performance.now() : Date.now();
-}
-
 function createTimingProfile(umbrales) {
   const baseMin = umbrales.permanencia_min_s ?? 30;
   const baseTarget = umbrales.permanencia_objetivo_s ?? 46;
@@ -381,8 +368,4 @@ function createTimingProfile(umbrales) {
     overdueChance: randomBetween(0.28, 0.52),
     readiness: randomBetween(0.72, 1.28),
   };
-}
-
-function randomBetween(min, max) {
-  return min + Math.random() * (max - min);
 }

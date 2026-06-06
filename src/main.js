@@ -50,6 +50,18 @@ function normalizeFuenteId(id) {
 }
 
 async function init() {
+  // ── Onboarding ──
+  const onboarding = document.getElementById('onboarding');
+  if (onboarding) {
+    const dismissOnboarding = () => {
+      onboarding.classList.add('hidden');
+      setTimeout(() => onboarding.remove(), 600);
+      window.removeEventListener('keydown', dismissOnboarding);
+      window.removeEventListener('click', dismissOnboarding);
+    };
+    window.addEventListener('keydown', dismissOnboarding);
+    window.addEventListener('click', dismissOnboarding);
+  }
 
   const sala = new LaSala(patrones.length);
 

@@ -1,7 +1,10 @@
+import { clamp, round2 } from '../utils.js';
+
 export class LaSala {
   constructor(numPatrones) {
     this.numPatrones = numPatrones;
     this.terreno     = new Float32Array(numPatrones); // stigmergy: 0-1
+    this.memoriaLarga = new Float32Array(numPatrones); // decae lento — memoria de toda la obra
     this.instrumentos = {};
     this._historialAvances = []; // últimos 8 ciclos: 1=avanzó, 0=repitió
     this._shockwaves = []; // { pos, age }
@@ -56,6 +59,7 @@ export class LaSala {
   pulso() {
     for (let i = 0; i < this.numPatrones; i++) {
       this.terreno[i] = Math.max(0, this.terreno[i] - 0.04);
+      this.memoriaLarga[i] = Math.max(0, this.memoriaLarga[i] - 0.001);
     }
     for (let i = this._shockwaves.length - 1; i >= 0; i--) {
       this._shockwaves[i].age += 0.08;
@@ -65,6 +69,7 @@ export class LaSala {
       const pos = this.instrumentos[id].posicion;
       if (pos >= 0 && pos < this.numPatrones) {
         this.terreno[pos] = Math.min(1, this.terreno[pos] + 0.18);
+        this.memoriaLarga[pos] = Math.min(1, this.memoriaLarga[pos] + 0.004);
       }
     }
     this._actualizarGeometria(false);
@@ -206,7 +211,6 @@ export class LaSala {
 
   // --- Función de probabilidad central ---
   // Combina señal de API + las 3 capas físicas de La Sala
-  // Combina señal de API + las 3 capas físicas de La Sala
   calcularProbabilidadBreakdown(id, pos, señal, mapeo, pesos, umbrales, memoria = null) {
     const centro    = this.getCentroMasa();
     const densidad  = this.getDensidad(pos);
@@ -224,6 +228,12 @@ export class LaSala {
     const p_shockwave = this.getImpactoShockwave(pos) * 0.22;
     const p_geometria = this._calcularPresionGeometrica(id, pos, geometria, memoria);
     const p_escucha    = escucha?.presion ?? 0;
+
+    // Memoria larga: patrón agotado empuja, territorio fresco atrae
+    const memoriActual = this.memoriaLarga[pos] ?? 0;
+    const memoriaNext = pos < this.numPatrones - 1 ? (this.memoriaLarga[pos + 1] ?? 0) : 0;
+    const p_memoria = clamp((memoriActual > 0.7 ? 0.12 : 0) + (memoriaNext < 0.15 ? 0.06 : 0), 0, 0.18);
+
     const freno       = pos > centro + umbrales.distancia_max ? 0.6 : 0;
 
     const partes = {
@@ -235,6 +245,7 @@ export class LaSala {
       shockwave: p_shockwave,
       geometria: p_geometria,
       escucha:   p_escucha,
+      memoria:   p_memoria,
       freno,
     };
 
@@ -246,6 +257,7 @@ export class LaSala {
                 + partes.shockwave
                 + partes.geometria
                 + partes.escucha
+                + partes.memoria
                 - partes.freno;
 
     const contribuciones = [
@@ -257,6 +269,7 @@ export class LaSala {
       ['impacto', partes.shockwave],
       ['geometria', partes.geometria],
       ['escucha', partes.escucha],
+      ['memoria', partes.memoria],
       ['freno', -partes.freno],
     ].sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
 
@@ -271,6 +284,7 @@ export class LaSala {
       shockwave: round2(partes.shockwave),
       geometria: round2(partes.geometria),
       escucha: round2(partes.escucha),
+      memoria: round2(partes.memoria),
       freno: round2(partes.freno),
       densidad,
       centro: round2(centro),
@@ -365,10 +379,3 @@ export class LaSala {
   }
 }
 
-function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v));
-}
-
-function round2(v) {
-  return Math.round(v * 100) / 100;
-}

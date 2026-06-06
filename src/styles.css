@@ -265,7 +265,7 @@ body.dark-theme #main-view { background: var(--canvas-bg); background-color: var
   transform: translateX(-50%) rotate(-90deg);
   transform-origin: center;
   font-family: var(--mono);
-  font-size: 0.42rem;
+  font-size: 0.56rem;
   font-weight: 700;
   color: rgba(0,0,0,0.75);
 }
@@ -375,7 +375,7 @@ body.sidebar-open #sidebar {
   background: var(--bg);
   padding: 0.06rem 0.28rem;
   font-family: var(--mono);
-  font-size: 0.48rem;
+  font-size: 0.56rem;
   white-space: nowrap;
 }
 .word-chip b { color: #111; }
@@ -412,7 +412,7 @@ body.sidebar-open #sidebar {
 .cat-row span,
 .cat-row b {
   font-family: var(--mono);
-  font-size: 0.48rem;
+  font-size: 0.56rem;
 }
 .cat-row div {
   height: 4px;
@@ -431,7 +431,7 @@ body.sidebar-open #sidebar {
   color: #666;
 }
 .headline-row {
-  font-size: 0.48rem;
+  font-size: 0.56rem;
   line-height: 1.25;
 }
 .headline-row b {
@@ -697,7 +697,7 @@ select.lente-sel:focus { outline: 1px solid var(--fg); }
 }
 .playable-synth-switches button {
   padding: 0.22rem 0.35rem;
-  font-size: 0.48rem;
+  font-size: 0.56rem;
 }
 .playable-synth-switches button.active {
   background: var(--fg);
@@ -723,7 +723,7 @@ select.lente-sel:focus { outline: 1px solid var(--fg); }
   border-right: 1px solid var(--line);
   background: var(--panel);
   font-family: var(--mono);
-  font-size: 0.46rem;
+  font-size: 0.56rem;
   color: var(--muted);
   letter-spacing: 0;
 }
@@ -743,7 +743,7 @@ select.lente-sel:focus { outline: 1px solid var(--fg); }
   flex-direction: column;
   gap: 0.2rem;
   font-family: var(--mono);
-  font-size: 0.48rem;
+  font-size: 0.56rem;
   color: var(--muted);
 }
 .synth-control-grid select {
@@ -1069,7 +1069,7 @@ body.dark-theme button:hover:not(:disabled) {
   border: 1px solid var(--line);
   padding: 0.05rem 0.22rem;
   font-family: var(--mono);
-  font-size: 0.46rem;
+  font-size: 0.56rem;
   font-style: normal;
   color: var(--muted);
 }
@@ -1284,4 +1284,37 @@ body.dark-theme input[type="range"] {
 body.dark-theme #main-view,
 body.dark-theme #circle-container {
   background-color: #0c1118 !important;
+}
+
+/* ─ ONBOARDING ─ */
+#onboarding {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+  cursor: pointer;
+  transition: opacity 0.5s ease;
+}
+#onboarding.hidden { opacity: 0; pointer-events: none; }
+.onboarding-content {
+  max-width: 480px; padding: 3rem; text-align: center;
+}
+.onboarding-content h2 {
+  font-size: 1.6rem; font-weight: 700; letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.onboarding-content p {
+  font-family: var(--mono); font-size: 0.82rem; line-height: 1.7;
+  color: var(--muted); margin-top: 0.8rem;
+}
+.onboarding-sub { font-size: 0.75rem !important; }
+.onboarding-action {
+  margin-top: 2rem !important;
+  font-size: 0.68rem !important;
+  color: var(--accent) !important;
+  letter-spacing: 0.08em;
+  animation: pulse-text 2s ease-in-out infinite;
+}
+@keyframes pulse-text {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
