@@ -60,7 +60,7 @@ export class PartituraView {
       const T = this._trailCtx;
       const N = sala.numPatrones;
       const compact = W < 600;
-      const marginX = compact ? 42 : Math.max(64, Math.min(112, W * 0.08));
+      const marginX = compact ? 88 : Math.max(96, Math.min(132, W * 0.1));
       const topY = compact ? 96 : 118;
       const bottomY = H - (compact ? 82 : 108);
       const laneH = Math.max(compact ? 64 : 72, (bottomY - topY) / Math.max(1, this.ids.length - 1));
@@ -300,7 +300,7 @@ export class PartituraView {
       C.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.35)`;
       C.lineWidth = 2;
       C.beginPath();
-      C.moveTo(64, p.y);
+      C.moveTo(marginX, p.y);
       C.lineTo(C.canvas.width, p.y);
       C.stroke();
 
@@ -347,10 +347,10 @@ export class PartituraView {
       C.textAlign = 'right';
       C.textBaseline = 'middle';
       C.font = '700 13px Georgia, serif';
-      C.fillText(p.inst._nombre || id, 58, p.y - 11);
+      C.fillText(p.inst._nombre || id, marginX - 8, p.y - 11);
       C.font = '10px Courier New, monospace';
       C.fillStyle = muted;
-      C.fillText(`${p.ui.estado} · ${Math.min(p.inst.posicion + 1, N)}/${N}`, 58, p.y + 8);
+      C.fillText(`${p.ui.estado} · ${Math.min(p.inst.posicion + 1, N)}/${N}`, marginX - 8, p.y + 8);
 
       C.textAlign = 'left';
       C.fillStyle = fg;

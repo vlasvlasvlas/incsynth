@@ -87,8 +87,8 @@ async function init() {
     inst._manualBlend = 0;
     inst._advanceBias = 0;
     inst._manualMuta = 0;
-    inst._glowRadius = 1;
-    inst._lightGain = 1;
+    inst._glowRadius = 3;
+    inst._lightGain = 2.5;
     instrumentos[id] = inst;
     sala.registrarInstrumento(id, 0);
     inst.conectarFuentes([{ id: `${fid}_A`, tipo: fid, source: fuentes[fid], mapeo }]);
