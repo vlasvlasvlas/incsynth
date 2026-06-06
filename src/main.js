@@ -1006,15 +1006,30 @@ function buildRitmoCard(getEngine) {
   const pulsoControl = document.createElement('div'); pulsoControl.className = 'ritmo-pulso-input';
   const pulsoSlider = document.createElement('input');
   pulsoSlider.type = 'range'; pulsoSlider.min = -40; pulsoSlider.max = 0; pulsoSlider.step = 1; pulsoSlider.value = -18;
-  const pulsoVal = document.createElement('span'); pulsoVal.className = 'lente-efecto'; pulsoVal.textContent = '-18 dB';
+  pulsoSlider.setAttribute('aria-label', 'Volumen del golpe agudo');
+  pulsoSlider.title = '-18 dB';
+  let kickEnabled = false;
+  const kickBtn = document.createElement('button');
+  kickBtn.type = 'button';
+  kickBtn.className = 'ritmo-kick-btn';
+  kickBtn.textContent = 'BOMBO';
+  kickBtn.title = 'Sumar bombo grave en negras';
+  kickBtn.setAttribute('aria-pressed', 'false');
   pulsoSlider.addEventListener('input', () => {
     const v = parseInt(pulsoSlider.value);
-    pulsoVal.textContent = `${v} dB`;
+    pulsoSlider.title = `${v} dB`;
     const eng = getEngine();
     if (eng?._pulse) eng._pulse.setVolume(v);
   });
+  kickBtn.addEventListener('click', () => {
+    kickEnabled = !kickEnabled;
+    kickBtn.classList.toggle('active', kickEnabled);
+    kickBtn.setAttribute('aria-pressed', String(kickEnabled));
+    kickBtn.title = kickEnabled ? 'Quitar bombo grave' : 'Sumar bombo grave en negras';
+    getEngine()?._pulse?.setKickEnabled(kickEnabled);
+  });
   pulsoControl.appendChild(pulsoSlider);
-  pulsoControl.appendChild(pulsoVal);
+  pulsoControl.appendChild(kickBtn);
   pulsoRow.appendChild(pulsoLbl);
   pulsoRow.appendChild(pulsoControl);
   grid.appendChild(pulsoRow);
@@ -1027,6 +1042,7 @@ function buildRitmoCard(getEngine) {
       engine._pulse?.setWaveform(timbreSel.value);
       engine._pulse?.setFrequency(freqInput.value);
       engine._pulse?.setVolume(pulsoSlider.value);
+      engine._pulse?.setKickEnabled(kickEnabled);
     },
   };
 }

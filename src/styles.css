@@ -510,7 +510,7 @@ select.lente-sel:focus { outline: 1px solid var(--fg); }
 }
 .ritmo-pulso-input {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.35rem;
   min-width: 0;
@@ -519,9 +519,20 @@ select.lente-sel:focus { outline: 1px solid var(--fg); }
   width: 100%;
   min-width: 0;
 }
-.ritmo-pulso-input .lente-efecto {
-  min-width: 0;
-  text-align: right;
+.ritmo-kick-btn {
+  height: 30px;
+  min-height: 30px;
+  padding: 0 0.42rem;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.04em;
+}
+.ritmo-kick-btn.active {
+  background: var(--fg);
+  color: var(--bg);
 }
 .noticias-help {
   margin-bottom: 0.45rem;
@@ -968,6 +979,10 @@ body.dark-theme .senal-origen b {
     width: 100%;
     height: 44px;
     text-align: center;
+  }
+  .ritmo-kick-btn {
+    height: 44px;
+    min-height: 44px;
   }
   .sala-panel {
     width: auto;
