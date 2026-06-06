@@ -94,6 +94,21 @@ export const PRESETS = {
     volume: -12,
   },
 
+  PULSO_FM: {
+    nombre: 'Pulso FM',
+    desc:   'Ataque electrónico corto, grave definido y armónicos sintéticos',
+    tipo:   'FMSynth',
+    config: {
+      harmonicity: 1.5,
+      modulationIndex: 8,
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.002, decay: 0.16, sustain: 0.03, release: 0.22 },
+      modulation: { type: 'square' },
+      modulationEnvelope: { attack: 0.001, decay: 0.08, sustain: 0, release: 0.12 },
+    },
+    volume: -15,
+  },
+
   METALICO: {
     nombre: 'Metálico',
     desc:   'Percusivo brillante, reverberante',
@@ -219,8 +234,8 @@ export const PRESETS = {
 };
 
 export const DEFAULTS = {
-  cuerdas:   'VANGELIS',
-  percusion: 'MORODER',
-  melodia:   'SPACE_LADY',
+  cuerdas:   'ARCO',
+  percusion: 'PULSO_FM',
+  melodia:   'FLAUTA',
   mallets:   'GAMELAN',
 };

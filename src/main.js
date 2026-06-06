@@ -111,7 +111,7 @@ async function init() {
     circle: new CircleView(mainContainer, instIds),
     partitura: new PartituraView(mainContainer, instIds)
   };
-  let currentViewId = 'partitura';
+  let currentViewId = window.matchMedia('(max-width: 820px)').matches ? 'circle' : 'partitura';
 
   // Inicializar dejando solo el activo en el DOM
   mainContainer.innerHTML = '';
@@ -206,7 +206,8 @@ async function init() {
   tableroEl.appendChild(sonidoPanel.card);
 
   // BPM + Pulso
-  tableroEl.appendChild(buildRitmoCard(() => engine));
+  const ritmoPanel = buildRitmoCard(() => engine);
+  tableroEl.appendChild(ritmoPanel.card);
 
   // Botón play/stop unificado en header
   const btnPlay = document.getElementById('btn-detener');
@@ -216,6 +217,7 @@ async function init() {
     if (!engine) {
       // Iniciar
       engine = new AudioEngine(config, patrones, sala, instrumentos, () => {});
+      ritmoPanel.apply(engine);
       window._engine = engine;
       engine.start();
       btnPlay.textContent = '■';
@@ -932,24 +934,69 @@ function buildRitmoCard(getEngine) {
   const h = document.createElement('h3'); h.textContent = 'RITMO'; card.appendChild(h);
 
   // BPM
-  const bpmRow = document.createElement('div'); bpmRow.className = 'lente-row';
+  const bpmRow = document.createElement('div'); bpmRow.className = 'lente-row ritmo-bpm-row ritmo-number-row';
   const bpmLbl = document.createElement('span'); bpmLbl.className = 'lente-label'; bpmLbl.textContent = 'BPM';
-  const bpmSlider = document.createElement('input');
-  bpmSlider.type = 'range'; bpmSlider.min = 60; bpmSlider.max = 160; bpmSlider.step = 1; bpmSlider.value = 96;
-  bpmSlider.style.flex = '1';
-  const bpmVal = document.createElement('span'); bpmVal.className = 'lente-efecto'; bpmVal.textContent = '96';
-  bpmSlider.addEventListener('input', () => {
-    const v = parseInt(bpmSlider.value);
-    bpmVal.textContent = v;
-    // Cambio inmediato — rampTo rompe el scheduling recursivo
+  const bpmInput = document.createElement('input');
+  bpmInput.type = 'number';
+  bpmInput.min = '30';
+  bpmInput.max = '180';
+  bpmInput.step = '1';
+  bpmInput.value = '70';
+  bpmInput.className = 'bpm-number-input';
+  bpmInput.setAttribute('aria-label', 'Tempo en BPM');
+  const applyBpm = raw => {
+    const v = Math.max(30, Math.min(180, Math.round(Number(raw) || 70)));
+    bpmInput.value = String(v);
     const eng = getEngine();
     if (eng) eng.setBPM(v);
     else Tone.Transport.bpm.value = v;
     const lbl = document.getElementById('bpm-label');
     if (lbl) lbl.textContent = `${v} BPM`;
+  };
+  bpmInput.addEventListener('input', () => {
+    if (bpmInput.value !== '') applyBpm(bpmInput.value);
   });
-  bpmRow.appendChild(bpmLbl); bpmRow.appendChild(bpmSlider); bpmRow.appendChild(bpmVal);
+  bpmInput.addEventListener('change', () => applyBpm(bpmInput.value));
+  applyBpm(70);
+  bpmRow.appendChild(bpmLbl); bpmRow.appendChild(bpmInput);
   card.appendChild(bpmRow);
+
+  const timbreRow = document.createElement('div'); timbreRow.className = 'lente-row';
+  const timbreLbl = document.createElement('span'); timbreLbl.className = 'lente-label'; timbreLbl.textContent = 'TIMBRE';
+  const timbreSel = document.createElement('select'); timbreSel.className = 'lente-sel';
+  [
+    ['triangle', 'TRIÁNGULO'],
+    ['sine', 'SENO'],
+    ['square', 'CUADRADA'],
+    ['sawtooth', 'SIERRA'],
+  ].forEach(([value, label]) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    timbreSel.appendChild(option);
+  });
+  timbreSel.value = 'triangle';
+  timbreSel.addEventListener('change', () => getEngine()?._pulse?.setWaveform(timbreSel.value));
+  timbreRow.appendChild(timbreLbl);
+  timbreRow.appendChild(timbreSel);
+  card.appendChild(timbreRow);
+
+  const freqRow = document.createElement('div'); freqRow.className = 'lente-row ritmo-number-row';
+  const freqLbl = document.createElement('span'); freqLbl.className = 'lente-label'; freqLbl.textContent = 'FREQ';
+  const freqInput = document.createElement('input');
+  freqInput.type = 'number';
+  freqInput.min = '110';
+  freqInput.max = '3520';
+  freqInput.step = '1';
+  freqInput.value = '1047';
+  freqInput.className = 'bpm-number-input pulse-frequency-input';
+  freqInput.setAttribute('aria-label', 'Frecuencia del pulso en Hz');
+  freqInput.addEventListener('input', () => {
+    if (freqInput.value !== '') getEngine()?._pulse?.setFrequency(freqInput.value);
+  });
+  freqRow.appendChild(freqLbl);
+  freqRow.appendChild(freqInput);
+  card.appendChild(freqRow);
 
   // Volumen del pulso
   const pulsoRow = document.createElement('div'); pulsoRow.className = 'lente-row';
@@ -967,7 +1014,16 @@ function buildRitmoCard(getEngine) {
   pulsoRow.appendChild(pulsoLbl); pulsoRow.appendChild(pulsoSlider); pulsoRow.appendChild(pulsoVal);
   card.appendChild(pulsoRow);
 
-  return card;
+  return {
+    card,
+    apply(engine) {
+      if (!engine) return;
+      engine.setBPM(bpmInput.value);
+      engine._pulse?.setWaveform(timbreSel.value);
+      engine._pulse?.setFrequency(freqInput.value);
+      engine._pulse?.setVolume(pulsoSlider.value);
+    },
+  };
 }
 
 init();

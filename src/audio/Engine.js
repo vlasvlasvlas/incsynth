@@ -13,12 +13,13 @@ export class AudioEngine {
     this.filtros      = {};
     this._pulse       = new Pulse();
     this._running     = false;
-    this._lastBpm      = 96;
-    this._patternTimers = {};
-    this._pulseTimer = null;
+    this._lastBpm      = 70;
+    this._transportEvents = new Set();
+    this._patternEvents = {};
+    this._pulseEvent = null;
 
-    // Reverb compartido — base 0.35, sube con momentum
-    this._reverb = new Tone.Reverb({ decay: 4, wet: 0.35 }).toDestination();
+    // Reverb compartida contenida para mantener legible la grilla.
+    this._reverb = new Tone.Reverb({ decay: 2.8, wet: 0.18 }).toDestination();
     this._reverb.generate();
 
     // Construir un synth por instrumento según su preset por defecto
@@ -29,9 +30,13 @@ export class AudioEngine {
   }
 
   _buildSynth(id, presetKey) {
-    // Dispose del synth anterior si existe
+    // Liberar toda la cadena anterior antes de reconstruir el timbre.
     if (this.synths[id]) { try { this.synths[id].dispose(); } catch (_) {} }
-    if (this.filtros[id]) { try { this.filtros[id].dispose(); } catch (_) {} }
+    if (this.localEffects?.[id]) {
+      this.localEffects[id].forEach(node => {
+        try { node.dispose(); } catch (_) {}
+      });
+    }
 
     const preset = PRESETS[presetKey] || PRESETS.VANGELIS;
     
@@ -93,53 +98,49 @@ export class AudioEngine {
   }
 
   async start() {
+    if (this._running) return;
+    await Tone.start();
     this._running = true;
-    Tone.start().catch(() => {});
-    Tone.Transport.bpm.value = this._lastBpm;
+    Tone.Transport.stop();
     Tone.Transport.cancel(0);
-    Tone.Transport.start();
-    this._startPulseLoop();
+    Tone.Transport.position = 0;
+    Tone.Transport.bpm.value = this._lastBpm;
+    this._schedulePulse();
 
     let idx = 0;
     for (const id in this.instrumentos) {
       this.instrumentos[id].sala.registrarInstrumento(id, 0);
       this.instrumentos[id].reiniciarMaduracion?.();
-      this._schedulePattern(id, 0.15 + idx * 0.08);
+      const startTick = this._notationToTicks('8n') * idx;
+      this._schedulePatternCycle(id, startTick);
       idx++;
     }
+    Tone.Transport.start('+0.08');
   }
 
   stop() {
     this._running = false;
-    if (this._pulseTimer) {
-      clearTimeout(this._pulseTimer);
-      this._pulseTimer = null;
-    }
-    for (const id in this._patternTimers) {
-      clearTimeout(this._patternTimers[id]);
-    }
-    this._patternTimers = {};
     Tone.Transport.stop();
     Tone.Transport.cancel(0);
+    this._transportEvents.clear();
+    this._patternEvents = {};
+    this._pulseEvent = null;
   }
 
-  _startPulseLoop() {
-    const tick = () => {
+  _schedulePulse() {
+    this._pulseEvent = Tone.Transport.scheduleRepeat(time => {
       if (!this._running) return;
-      const now = Tone.now();
-      this._pulse.triggerAt(now);
+      this._pulse.triggerAt(time);
       this.sala.pulso();
       this._actualizarSintesis();
-      const delayMs = Math.max(40, Tone.Time('8n').toSeconds() * 1000);
-      this._pulseTimer = setTimeout(tick, delayMs);
-    };
-    tick();
+    }, '8n', 0);
+    this._transportEvents.add(this._pulseEvent);
   }
 
   _actualizarSintesis() {
     const mom = this.sala.getMomentum();
-    // Base 0.35 + hasta 0.45 de contagio = max 0.80
-    this._reverb.wet.rampTo(0.35 + mom * 0.45, 0.5);
+    // El momentum abre el espacio sin borrar articulación.
+    this._reverb.wet.rampTo(0.18 + mom * 0.24, 0.5);
 
     for (const id in this.instrumentos) {
       const inst = this.instrumentos[id];
@@ -166,63 +167,78 @@ export class AudioEngine {
     this._pulse.setDegradacion(maxVol);
   }
 
-  _patternDurationBeats(patron) {
-    // Calcula la duración de un patrón en beats (quarter notes)
-    // Tone.Time convierte "8n", "4n", etc a segundos con el BPM actual,
-    // pero en beats es invariante: "8n" = 0.5 beat siempre.
-    return patron.reduce((sum, ev) => {
-      return sum + Tone.Time(ev.duracion).toBarsBeatsSixteenths()
-        // fallback: convertir usando 60/bpm ratio
-        .split(':').reduce((acc, part, i) => {
-          const factors = [4, 1, 0.25]; // bars=4 beats, beats=1, 16ths=0.25
-          return acc + parseFloat(part || 0) * (factors[i] || 0);
-        }, 0);
-    }, 0);
+  _notationToTicks(notation) {
+    return Math.max(1, Math.round(Tone.Time(notation).toTicks()));
   }
 
-  _schedulePattern(id, delaySeconds = 0) {
+  _patternDurationTicks(patron) {
+    const ticks = patron.reduce((sum, event) => sum + this._notationToTicks(event.duracion), 0);
+    return Math.max(this._notationToTicks('16n'), ticks);
+  }
+
+  _scheduleAtTick(tick, callback, ownerId = null) {
+    let eventId = null;
+    eventId = Tone.Transport.scheduleOnce(time => {
+      this._transportEvents.delete(eventId);
+      if (ownerId) this._patternEvents[ownerId]?.delete(eventId);
+      if (this._running) callback(time);
+    }, `${Math.max(0, Math.round(tick))}i`);
+    this._transportEvents.add(eventId);
+    if (ownerId) {
+      this._patternEvents[ownerId] ||= new Set();
+      this._patternEvents[ownerId].add(eventId);
+    }
+    return eventId;
+  }
+
+  _schedulePatternCycle(id, startTick) {
     if (!this._running) return;
-    clearTimeout(this._patternTimers[id]);
-    this._patternTimers[id] = setTimeout(() => {
-      if (!this._running) return;
-      const inst = this.instrumentos[id];
-      inst.tick();
-      const ui = inst.getEstadoUI();
-
-      if (ui.estado === ESTADOS.DORMIDO) {
-        this._schedulePattern(id, 2);
-        return;
-      }
-      if (inst.posicion >= this.patrones.length) return;
-
-      const patron = this.patrones[inst.posicion];
-      const jitter = ui.estado === ESTADOS.DESBORDADO ? 0.035 : 0;
-      const startTime = Tone.now() + 0.03;
-      let timeOffset = 0;
-
-      for (const ev of patron) {
-        const dur = Tone.Time(ev.duracion).toSeconds();
-        if (ev.nota && ui.estado !== ESTADOS.DESCANSANDO) {
-          const j = (Math.random() - 0.5) * jitter;
-          try { this.synths[id]?.triggerAttackRelease(ev.nota, ev.duracion, startTime + timeOffset + j); }
-          catch (_) {}
-        }
-        timeOffset += dur;
-      }
-
-      const finishDelayMs = Math.max(20, timeOffset * 1000);
-      this._patternTimers[id] = setTimeout(() => {
-        if (!this._running) return;
-        if (inst.posicion >= this.patrones.length) return;
-      const avanzo = inst.decidirAvance();
-        if (this.onCiclo) this.onCiclo(id, inst.posicion, avanzo, inst.getEstadoUI());
-        this._schedulePattern(id, 0.02);
-      }, finishDelayMs);
-    }, Math.max(0, delaySeconds) * 1000);
+    this._scheduleAtTick(startTick, startTime => {
+      this._runPatternCycle(id, startTick, startTime);
+    }, id);
   }
 
-  // Cambiar BPM de forma segura: el scheduling recursivo usa `t` real,
-  // por lo que el cambio se absorbe en el próximo ciclo sin desincronización.
+  _runPatternCycle(id, startTick, startTime) {
+    if (!this._running) return;
+    const inst = this.instrumentos[id];
+    inst.tick();
+    const ui = inst.getEstadoUI();
+
+    if (ui.estado === ESTADOS.DORMIDO) {
+      this._schedulePatternCycle(id, startTick + this._notationToTicks('1m'));
+      return;
+    }
+    if (inst.posicion >= this.patrones.length) return;
+
+    const patron = this.patrones[inst.posicion];
+    const durationTicks = this._patternDurationTicks(patron);
+    let offsetTicks = 0;
+
+    for (const ev of patron) {
+      if (ev.nota && ui.estado !== ESTADOS.DESCANSANDO) {
+        const noteTick = startTick + offsetTicks;
+        const trigger = time => {
+          try {
+            this.synths[id]?.triggerAttackRelease(ev.nota, ev.duracion, time);
+          } catch (_) {}
+        };
+        if (offsetTicks === 0) trigger(startTime);
+        else this._scheduleAtTick(noteTick, trigger, id);
+      }
+      offsetTicks += this._notationToTicks(ev.duracion);
+    }
+
+    const finishTick = startTick + durationTicks;
+    this._scheduleAtTick(finishTick, finishTime => {
+      if (inst.posicion >= this.patrones.length) return;
+      const avanzo = inst.decidirAvance();
+      if (this.onCiclo) this.onCiclo(id, inst.posicion, avanzo, inst.getEstadoUI());
+      // El siguiente ciclo hereda el timestamp exacto del límite anterior.
+      this._runPatternCycle(id, finishTick, finishTime);
+    }, id);
+  }
+
+  // Transport conserva la posición musical al cambiar BPM.
   setBPM(v) {
     this._lastBpm = Math.max(20, Math.min(300, v));
     Tone.Transport.bpm.rampTo(this._lastBpm, 0.1);
@@ -247,13 +263,12 @@ export class AudioEngine {
     for (const id in this.synths) {
       this.synths[id].dispose();
     }
-    for (const id in this.localEffects) {
+    for (const id in this.localEffects || {}) {
       if (this.localEffects[id]) {
         this.localEffects[id].forEach(fx => {
           try { fx.dispose(); } catch(e){}
         });
       }
     }
-    try { this._reverb.dispose(); } catch (_) {}
   }
 }

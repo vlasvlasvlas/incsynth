@@ -35,6 +35,7 @@ export class Instrumento {
     this._lastSignalMagnitude = 0;
     this._signalDelta         = 0;
     this._patternEnteredAt    = nowMs();
+    this._timingProfile       = createTimingProfile(this.umbrales);
   }
 
   // Conectar array de fuentes: [{ id, tipo, source, mapeo }]
@@ -118,6 +119,7 @@ export class Instrumento {
     if (avanzo) {
       this.posicion++;
       this._patternEnteredAt = nowMs();
+      this._timingProfile = createTimingProfile(this.umbrales);
       this.sala.actualizarPosicion(this.id, this.posicion, true);
       this._lastDecision = 'AVANZO al proximo patron';
     } else {
@@ -132,6 +134,7 @@ export class Instrumento {
     if (this.posicion >= this.sala.numPatrones - 1) return false;
     this.posicion++;
     this._patternEnteredAt = nowMs();
+    this._timingProfile = createTimingProfile(this.umbrales);
     this.estado = ESTADOS.SONANDO;
     this.sala.actualizarPosicion(this.id, this.posicion, true);
     this._lastDecision = `AVANZO: ${motivo}`;
@@ -143,6 +146,7 @@ export class Instrumento {
     this._patternEnteredAt = nowMs();
     this._repeticiones = 0;
     this._historialDecisiones = [];
+    this._timingProfile = createTimingProfile(this.umbrales);
   }
 
   getProbabilidadBreakdown() {
@@ -208,6 +212,7 @@ export class Instrumento {
       avanceBias:    this._advanceBias,
       repeticiones:  this._repeticiones,
       escucha:       this.getCanalEscucha(),
+      perfilTemporal: { ...this._timingProfile },
     };
   }
 
@@ -228,26 +233,36 @@ export class Instrumento {
 
   _aplicarMaduracionTemporal(breakdown) {
     const elapsed = Math.max(0, (nowMs() - this._patternEnteredAt) / 1000);
-    const min = this.umbrales.permanencia_min_s ?? 30;
-    const target = Math.max(min + 1, this.umbrales.permanencia_objetivo_s ?? 46);
-    const max = Math.max(target + 1, this.umbrales.permanencia_max_s ?? 74);
+    const profile = this._timingProfile;
+    const min = profile.min;
+    const target = profile.target;
+    const max = profile.max;
     const maturity = clamp((elapsed - min) / (target - min), 0, 1);
     const overdue = clamp((elapsed - target) / (max - target), 0, 1);
-    const demandStart = this.umbrales.avance_demanda_inicial ?? 0.82;
-    const demandMature = this.umbrales.avance_demanda_madura ?? 0.62;
+    const demandStart = profile.demandStart;
+    const demandMature = profile.demandMature;
     const demand = lerp(demandStart, demandMature, maturity);
     const score = breakdown.p;
     const qualification = clamp((score - demand) / Math.max(0.01, 1 - demand), 0, 1);
+    const cycleVariation = 0.55 + Math.random() * 0.9;
 
     let p = 0;
     if (elapsed >= min) {
-      p = qualification * 0.18 + maturity * 0.025 + overdue * 0.42;
+      p = (
+        qualification * 0.18
+        + maturity * profile.maturityChance
+        + overdue * profile.overdueChance
+      ) * profile.readiness * cycleVariation;
     }
 
     breakdown.score = round2(score);
     breakdown.demanda = round2(demand);
     breakdown.maduracion = round2(maturity);
     breakdown.permanencia = round2(elapsed);
+    breakdown.permanenciaMin = round2(min);
+    breakdown.permanenciaObjetivo = round2(target);
+    breakdown.permanenciaMax = round2(max);
+    breakdown.disposicion = round2(profile.readiness);
     breakdown.p = clamp(p, 0, 0.65);
     if (elapsed < min) breakdown.motivo = 'maduracion';
     else if (overdue > 0.5 && breakdown.p > 0.2) breakdown.motivo = 'tiempo';
@@ -339,4 +354,35 @@ function round2(v) {
 
 function nowMs() {
   return typeof performance !== 'undefined' ? performance.now() : Date.now();
+}
+
+function createTimingProfile(umbrales) {
+  const baseMin = umbrales.permanencia_min_s ?? 30;
+  const baseTarget = umbrales.permanencia_objetivo_s ?? 46;
+  const baseMax = umbrales.permanencia_max_s ?? 74;
+  const min = baseMin * randomBetween(0.86, 1.18);
+  const target = Math.max(min + 10, baseTarget * randomBetween(0.86, 1.20));
+  const max = Math.max(target + 18, baseMax * randomBetween(0.86, 1.22));
+  return {
+    min,
+    target,
+    max,
+    demandStart: clamp(
+      (umbrales.avance_demanda_inicial ?? 0.82) + randomBetween(-0.07, 0.07),
+      0.70,
+      0.92
+    ),
+    demandMature: clamp(
+      (umbrales.avance_demanda_madura ?? 0.62) + randomBetween(-0.08, 0.08),
+      0.48,
+      0.76
+    ),
+    maturityChance: randomBetween(0.012, 0.05),
+    overdueChance: randomBetween(0.28, 0.52),
+    readiness: randomBetween(0.72, 1.28),
+  };
+}
+
+function randomBetween(min, max) {
+  return min + Math.random() * (max - min);
 }

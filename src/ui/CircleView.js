@@ -66,7 +66,8 @@ export class CircleView {
     const T    = this._trailCtx;
     const cX   = W / 2;
     const cY   = H / 2;
-    const maxR = Math.min(W, H) * 0.38;
+    const compact = W < 600;
+    const maxR = Math.min(W, H) * (compact ? 0.29 : 0.38);
     const N    = sala.numPatrones;
 
     // ── 1. Trail canvas: fade + stigmergy radial ──
@@ -148,7 +149,8 @@ export class CircleView {
       const r     = (inst.posicion / N) * maxR;
       const x = cX + Math.cos(angle) * r;
       const y = cY + Math.sin(angle) * r;
-      pos[id] = { x, y, inst, r, angle, lblX: cX + Math.cos(angle) * (maxR + 40), lblY: cY + Math.sin(angle) * (maxR + 40) };
+      const labelOffset = compact ? 25 : 40;
+      pos[id] = { x, y, inst, r, angle, lblX: cX + Math.cos(angle) * (maxR + labelOffset), lblY: cY + Math.sin(angle) * (maxR + labelOffset) };
     }
 
     // ── 6. Forma común: triángulo creado por los tres músicos ──
@@ -312,16 +314,16 @@ export class CircleView {
       }
 
       C.textAlign = 'center'; C.textBaseline = 'middle';
-      C.font = 'bold 12px Courier New';
+      C.font = `bold ${compact ? 9 : 12}px Courier New`;
       C.fillStyle = fgCol;
       C.fillText(p.inst._nombre || id, p.lblX, p.lblY);
-      C.font = '10px Courier New';
+      C.font = `${compact ? 8 : 10}px Courier New`;
       C.fillStyle = fgCol; C.globalAlpha = 0.6;
       C.fillText(`${ui.estado} ${ui.posicion}/${N}`, p.lblX, p.lblY + 14);
       if (impact > 0.04) {
         C.fillStyle = '#cc8800';
         C.globalAlpha = 0.85;
-        C.fillText(`impacto ${Math.round(impact * 100)}%`, p.lblX, p.lblY + 28);
+        C.fillText(`impacto ${Math.round(impact * 100)}%`, p.lblX, p.lblY + (compact ? 22 : 28));
       }
       C.globalAlpha = 1;
       C.restore();
@@ -335,7 +337,7 @@ export class CircleView {
       { color: '#cc6000', label: 'frenado' },
       { color: '#cc2200', label: 'insiste' },
     ];
-    const iW  = 78;
+    const iW  = compact ? 62 : 78;
     const totW = sems.length * iW;
     let   lx  = cX - totW / 2;
     const ly  = cY + maxR + 32;
@@ -353,7 +355,11 @@ export class CircleView {
     C.fillStyle = fgCol;
     C.globalAlpha = 0.45;
     C.textAlign = 'center';
-    C.fillText('manchas: huella del patrón  ·  hilos: cohesión entre instrumentos  ·  anillo punteado: centro de grupo', cX, ly + 18);
+    C.fillText(
+      compact ? 'huella · cohesión · centro de grupo' : 'manchas: huella del patrón  ·  hilos: cohesión entre instrumentos  ·  anillo punteado: centro de grupo',
+      cX,
+      ly + 18
+    );
     C.globalAlpha = 1;
     C.restore();
     } catch (e) {

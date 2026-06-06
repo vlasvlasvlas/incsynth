@@ -320,6 +320,27 @@ El usuario puede intervenir sin reemplazar la autonomía del sistema:
 Los avances manuales no pasan por la compuerta temporal. Son gestos explícitos
 del convocante.
 
+## Ritmo y pulso compartido
+
+La obra parte de **70 BPM**. El tempo se escribe directamente como un número en
+el panel RITMO; no hay un deslizador que pueda moverlo accidentalmente.
+
+La grilla común se ejecuta con `Tone.Transport`, de modo que el pulso y los
+límites de cada patrón comparten el mismo reloj de audio. La volatilidad puede
+reducir levemente el acento, pero no desplaza ni omite el pulso.
+
+El pulso de medición usa por defecto un timbre electrónico breve. Desde el
+sidebar se pueden cambiar:
+
+- BPM;
+- forma de onda del pulso;
+- frecuencia;
+- volumen.
+
+La voz de percusión autónoma también utiliza por defecto **Pulso FM**, un ataque
+sintético corto con modulación de frecuencia, en lugar del sonido de madera o
+clave.
+
 ## Sintetizador acompañante
 
 Existe una cuarta voz manual que no participa de las decisiones autónomas de la

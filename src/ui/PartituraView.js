@@ -59,10 +59,11 @@ export class PartituraView {
       const C = this._ctx;
       const T = this._trailCtx;
       const N = sala.numPatrones;
-      const marginX = Math.max(64, Math.min(112, W * 0.08));
-      const topY = 118;
-      const bottomY = H - 108;
-      const laneH = Math.max(72, (bottomY - topY) / Math.max(1, this.ids.length - 1));
+      const compact = W < 600;
+      const marginX = compact ? 42 : Math.max(64, Math.min(112, W * 0.08));
+      const topY = compact ? 96 : 118;
+      const bottomY = H - (compact ? 82 : 108);
+      const laneH = Math.max(compact ? 64 : 72, (bottomY - topY) / Math.max(1, this.ids.length - 1));
       const graphW = W - marginX * 2;
       const stepX = graphW / Math.max(1, N - 1);
       const center = sala.getCentroMasa();
@@ -104,15 +105,20 @@ export class PartituraView {
   }
 
   _drawHeader(C, fg, muted, marginX, W, N) {
+    const compact = W < 600;
     C.save();
     C.textAlign = 'left';
     C.textBaseline = 'top';
     C.fillStyle = fg;
-    C.font = '700 15px Georgia, serif';
-    C.fillText('PARTITURA DE CONVIVENCIA', marginX, 24);
-    C.font = '11px Courier New, monospace';
+    C.font = `700 ${compact ? 12 : 15}px Georgia, serif`;
+    C.fillText(compact ? 'PARTITURA' : 'PARTITURA DE CONVIVENCIA', marginX, 24);
+    C.font = `${compact ? 9 : 11}px Courier New, monospace`;
     C.fillStyle = muted;
-    C.fillText('53 patrones en orden. Cada músico escucha dos cosas: su mundo externo y la sala que forman los demás.', marginX, 48);
+    C.fillText(
+      compact ? '53 patrones · mundo externo + sala' : '53 patrones en orden. Cada músico escucha dos cosas: su mundo externo y la sala que forman los demás.',
+      marginX,
+      48
+    );
     C.textAlign = 'right';
     C.fillText(`1 → ${N}`, W - marginX, 48);
     C.restore();

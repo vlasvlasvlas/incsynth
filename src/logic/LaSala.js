@@ -220,7 +220,8 @@ export class LaSala {
     const p_cohesion  = clamp((centro - pos) / 4, 0, 1);
     const p_separac   = densidad > 1 ? 0.4 : 0;
     const p_momentum  = momentum;
-    const p_shockwave = this.getImpactoShockwave(pos) * 1.5; // Contagio fuerte
+    // El avance ajeno se escucha, pero no debe convertir la sala en un bloque.
+    const p_shockwave = this.getImpactoShockwave(pos) * 0.22;
     const p_geometria = this._calcularPresionGeometrica(id, pos, geometria, memoria);
     const p_escucha    = escucha?.presion ?? 0;
     const freno       = pos > centro + umbrales.distancia_max ? 0.6 : 0;
