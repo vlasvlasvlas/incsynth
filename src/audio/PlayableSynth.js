@@ -178,5 +178,10 @@ export class PlayableSynth {
 
 function isTypingTarget(target) {
   const tag = target?.tagName?.toLowerCase();
-  return ['input', 'select', 'textarea'].includes(tag) || target?.isContentEditable;
+  if (tag === 'input') {
+    const type = target.type?.toLowerCase();
+    // Block only if it's a typing input, not a slider or checkbox
+    return ['text', 'number', 'password', 'email', 'search'].includes(type);
+  }
+  return ['select', 'textarea'].includes(tag) || target?.isContentEditable;
 }
