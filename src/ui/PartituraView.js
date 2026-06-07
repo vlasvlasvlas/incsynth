@@ -84,12 +84,12 @@ export class PartituraView {
       C.fillStyle = bg;
       C.fillRect(0, 0, W, H);
 
-      this._drawHeader(C, fgCol, mutedCol, marginX, W, N);
+      this._depositTrails(T, instrumentos, sala, marginX, topY, laneH, stepX, N);
+      C.drawImage(this._trailCanvas, 0, 0, W, H);
+
       this._drawRileyBand(C, marginX, topY, bottomY, stepX, bandMin, bandMax, fgCol, isDark);
       this._drawGrid(C, marginX, topY, bottomY, stepX, N, fgCol, lineCol);
       this._drawShockwaves(C, sala, marginX, topY, bottomY, stepX);
-      this._depositTrails(T, instrumentos, sala, marginX, topY, laneH, stepX, N);
-      C.drawImage(this._trailCanvas, 0, 0, W, H);
 
       const pos = this._computePositions(instrumentos, sala, marginX, topY, laneH, stepX, N);
       this._drawListeningLines(C, pos, instrumentos, sala, fgCol, isDark);
@@ -137,11 +137,7 @@ export class PartituraView {
       C.lineTo(x, bottomY + 34);
       C.stroke();
       if (major) {
-        C.globalAlpha = 0.55;
-        C.fillStyle = fg;
-        C.font = '10px Courier New, monospace';
-        C.textAlign = 'center';
-        C.fillText(String(p + 1), x, topY - 58);
+        // Texto de número removido
       }
     }
     C.globalAlpha = 1;
@@ -381,18 +377,7 @@ export class PartituraView {
   }
 
   _drawFooter(C, fg, muted, W, H, sala) {
-    C.save();
-    C.fillStyle = fg;
-    C.globalAlpha = 0.74;
-    C.font = '11px Courier New, monospace';
-    C.textAlign = 'center';
-    const momentum = Math.round(sala.getMomentum() * 100);
-    const dist = sala.getDistanciaMaxima();
-    const geometria = sala.getGeometria();
-    C.fillText(`momentum ${momentum}% · distancia ${dist}p · forma ${geometria.estado} ${Math.round(geometria.area * 100)}% · banda Riley`, W / 2, H - 42);
-    C.fillStyle = muted;
-    C.fillText('La pieza no avanza por datos solos: avanza por la fricción entre mundo externo y sala compartida.', W / 2, H - 23);
-    C.restore();
+    // Texto del pie de página removido a pedido del usuario
   }
 
   _cssToRgb(css) {

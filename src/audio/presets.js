@@ -146,7 +146,7 @@ export const PRESETS = {
       oscillator: { type: 'triangle' },
       envelope:   { attack: 0.008, decay: 0.6, sustain: 0.35, release: 3.0 },
     },
-    volume: -13,
+    volume: -10,
   },
 
   MORODER: {

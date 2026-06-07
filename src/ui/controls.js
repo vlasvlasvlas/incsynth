@@ -85,7 +85,7 @@ export function buildPlayableSynthCard(synth) {
       <label>MODO<select data-param="mode">
         <option value="synth">SUBTRACTIVO</option>
         <option value="am">AM</option>
-        <option value="fm">FM</option>
+        <option value="fm" selected>FM</option>
       </select></label>
       <label>ONDA<select data-param="waveform">
         <option value="sine">SENO</option>
@@ -373,6 +373,17 @@ export function buildLenteCard(paisesData, lenteFuente, instrumentos) {
 
   selPais.addEventListener('change', update);
   selInd.addEventListener('change', update);
+
+  setInterval(() => {
+    const pOptions = selPais.options;
+    const iOptions = selInd.options;
+    if (pOptions.length > 1 && iOptions.length > 1) {
+      selPais.selectedIndex = Math.floor(Math.random() * (pOptions.length - 1)) + 1;
+      selInd.selectedIndex = Math.floor(Math.random() * (iOptions.length - 1)) + 1;
+      update();
+    }
+  }, 60000);
+
   return card;
 }
 

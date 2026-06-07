@@ -17,13 +17,13 @@ export class PlayableSynth {
   constructor() {
     this.enabled = true;
     this.hold = true;
-    this.mode = 'synth';
+    this.mode = 'fm';
     this.waveform = 'sine';
     this.attack = 0.8;
     this.decay = 1.2;
     this.sustain = 0.72;
     this.release = 4;
-    this.volume = -18;
+    this.volume = -30;
     this.filterFrequency = 2200;
     this.reverbWet = 0.48;
     this.activeNotes = new Set();
