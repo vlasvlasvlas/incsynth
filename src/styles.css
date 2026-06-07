@@ -776,6 +776,37 @@ select.lente-sel:focus { outline: 1px solid var(--fg); }
   width: 100%;
   accent-color: var(--fg);
 }
+.arp-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0 0.1rem;
+  border-top: 1px solid var(--soft);
+  flex-wrap: wrap;
+}
+.arp-row button {
+  padding: 0.22rem 0.38rem;
+  font-size: 0.56rem;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--muted);
+  font-family: var(--mono);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+}
+.arp-row button.active {
+  background: var(--fg);
+  color: var(--bg);
+}
+.arp-row select {
+  margin-left: auto;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+  padding: 0.2rem 0.3rem;
+  font-family: var(--mono);
+  font-size: 0.52rem;
+}
 
 body.dark-theme .senal-card,
 body.dark-theme .concept-card,

@@ -19,6 +19,7 @@
 - [2026-06-07 — Cleanup: renombrar YAMNet → Escucha Ambiente FFT en UI y docs](#2026-06-07--cleanup-renombrar-yamnet--escucha-ambiente-fft-en-ui-y-docs)
 - [2026-06-07 — Fix: MAX_MEM 2000 → 8000 (sesión perdía datos desde min 16)](#2026-06-07--fix-max_mem-2000--8000-sesión-perdía-datos-desde-min-16)
 - [2026-06-07 — GNN calibrado + Fase 5 RAVE + Fase 6 MARL reward](#2026-06-07--gnn-calibrado--fase-5-rave--fase-6-marl-reward)
+- [2026-06-07 — Feature: Arpegiador para el Sinte Acompañante](#2026-06-07--feature-arpegiador-para-el-sinte-acompañante)
 
 ---
 
@@ -751,6 +752,52 @@ RAVE no soporta MPS (Apple Silicon). El training local en CPU no es viable (día
 | 5 RAVE Browser | ⏸ Pendiente modelo entrenado |
 | 6 MARL Reward | ✅ Función diseñada en `marl/rewardFunction.js` |
 | 6 MARL Training | ⏸ Pendiente 5+ logs de sesión |
+
+---
+
+## 2026-06-07 — Feature: Arpegiador para el Sinte Acompañante
+
+### Contexto
+
+El usuario quería poder tocar acordes con el teclado (teclas 1–0) y que el sinte acompañante arpegiara automáticamente esas notas sincronizado con el BPM del sistema. La feature no debía afectar a los instrumentos de In C, solo al `PlayableSynth`.
+
+### Qué hicimos
+
+**`src/audio/PlayableSynth.js`**
+
+- Se agregó estado: `arpEnabled`, `arpMode` (`'up'`/`'down'`/`'random'`), `arpRate` (`'4n'`/`'8n'`/`'16n'`), `_arpIndex`, `_arpEvent`.
+- `_startArp()`: usa `Tone.Transport.scheduleRepeat()` con el intervalo seleccionado. Ordena las notas activas (UP/DOWN por orden cromático, RANDOM al azar cada paso). La duración de cada nota es una subdivisión menor que el intervalo (staccato limpio: `4n→8n`, `8n→16n`, `16n→32n`).
+- `_stopArp()`: limpia el evento con `Tone.Transport.clear()`.
+- `playNote()` en modo arp: solo gestiona el `Set` de `activeNotes`, no dispara audio directamente. El arp controla el voice.
+- `releaseAll()` resetea `_arpIndex`.
+- `getState()` expone `arp: { enabled, mode, rate }` para UI.
+- `_handleKeyUp()` ignora el key-up cuando el arp está activo (las notas no se sueltan por soltar la tecla en modo arp).
+
+**`src/ui/controls.js`**
+
+- Se agregó `.arp-row` con: botón ARP (toggle), botones UP / DOWN / RND (modo), select 1/4 / 1/8 / 1/16 (rate).
+- `_syncArpMode()` helper local que actualiza el estado visual de los tres botones de modo.
+- `synth.subscribe()` actualiza el toggle y el modo desde el estado interno.
+
+**`src/styles.css`**
+
+- `.arp-row`: flex, gap, border-top consistente con `.playable-range`.
+- `.arp-row button` y `.arp-row button.active`: misma paleta que `.playable-synth-switches`.
+- `.arp-row select`: mismo estilo que `.synth-control-grid select`.
+
+### Resultados
+
+Build sin errores (✓ 2266 módulos). La feature queda completamente encapsulada en `PlayableSynth` y su UI; no afecta Engine ni los instrumentos de In C.
+
+### Decisiones tomadas
+
+- El arp no usa `Math.random()` en el contexto del Transport si se puede evitar; en modo `random` sí lo usa porque es intencionalmente no-determinista (comportamiento esperado de un arp aleatorio).
+- La duración de nota es siempre una subdivisión por debajo del rate para dar separación audible entre pasos (staccato), sin requerir configuración extra.
+- Cambiar modo o rate mientras el arp está activo funciona en tiempo real: `setArpMode` cambia el campo y resetea el índice; `setArpRate` reinicia el evento con el nuevo intervalo.
+
+### Próximo paso
+
+Prueba auditiva: activar arp, teclear 2-4 notas, cambiar modo UP/DOWN/RND y rate en vivo.
 
 <!-- 
 PLANTILLA PARA NUEVAS ENTRADAS:

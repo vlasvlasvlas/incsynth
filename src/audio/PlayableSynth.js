@@ -13,6 +13,12 @@ const KEY_NOTES = {
   Digit0: 'E5',
 };
 
+// Duración de cada nota del arp = la mitad del intervalo (staccato limpio)
+const ARP_NOTE_DUR = { '4n': '8n', '8n': '16n', '16n': '32n' };
+
+// Orden cromático para UP / DOWN
+const NOTE_ORDER = ['C4','D4','E4','F4','G4','A4','B4','C5','D5','E5'];
+
 export class PlayableSynth {
   constructor() {
     this.enabled = true;
@@ -29,6 +35,13 @@ export class PlayableSynth {
     this.activeNotes = new Set();
     this.listeners = new Set();
 
+    // Arpegiador
+    this.arpEnabled = false;
+    this.arpMode    = 'up';   // 'up' | 'down' | 'random'
+    this.arpRate    = '8n';   // '4n' | '8n' | '16n'
+    this._arpIndex  = 0;
+    this._arpEvent  = null;
+
     this.filter = new Tone.Filter(this.filterFrequency, 'lowpass');
     this.reverb = new Tone.Reverb({ decay: 6, wet: this.reverbWet }).toDestination();
     this.reverb.generate();
@@ -36,10 +49,12 @@ export class PlayableSynth {
     this._buildVoice();
 
     this._onKeyDown = event => this._handleKeyDown(event);
-    this._onKeyUp = event => this._handleKeyUp(event);
+    this._onKeyUp   = event => this._handleKeyUp(event);
     window.addEventListener('keydown', this._onKeyDown);
-    window.addEventListener('keyup', this._onKeyUp);
+    window.addEventListener('keyup',   this._onKeyUp);
   }
+
+  // ── Subscripción ──────────────────────────────────────────────────────────
 
   subscribe(listener) {
     this.listeners.add(listener);
@@ -49,11 +64,18 @@ export class PlayableSynth {
 
   getState() {
     return {
-      enabled: this.enabled,
-      hold: this.hold,
+      enabled:     this.enabled,
+      hold:        this.hold,
       activeNotes: [...this.activeNotes],
+      arp: {
+        enabled: this.arpEnabled,
+        mode:    this.arpMode,
+        rate:    this.arpRate,
+      },
     };
   }
+
+  // ── Controles básicos ─────────────────────────────────────────────────────
 
   setEnabled(enabled) {
     this.enabled = Boolean(enabled);
@@ -98,33 +120,118 @@ export class PlayableSynth {
     if (this.voice) this.voice.volume.rampTo(this.volume, 0.08);
   }
 
-  releaseAll() {
-    if (this.voice && this.activeNotes.size) {
-      try { this.voice.releaseAll(); } catch (_) {}
+  // ── Arpegiador ────────────────────────────────────────────────────────────
+
+  setArpEnabled(enabled) {
+    this.arpEnabled = Boolean(enabled);
+    // Limpiar el voice al activar para que el arp arranque limpio
+    try { this.voice?.releaseAll(); } catch (_) {}
+    this._arpIndex = 0;
+    if (this.arpEnabled) {
+      this._startArp();
+    } else {
+      this._stopArp();
     }
-    this.activeNotes.clear();
     this._emit();
   }
+
+  setArpMode(mode) {
+    if (!['up', 'down', 'random'].includes(mode)) return;
+    this.arpMode   = mode;
+    this._arpIndex = 0;
+  }
+
+  setArpRate(rate) {
+    if (!['4n', '8n', '16n'].includes(rate)) return;
+    this.arpRate = rate;
+    if (this.arpEnabled) {
+      this._stopArp();
+      this._startArp();
+    }
+  }
+
+  _startArp() {
+    this._stopArp();
+    this._arpIndex = 0;
+    const dur = ARP_NOTE_DUR[this.arpRate] || '16n';
+
+    this._arpEvent = Tone.Transport.scheduleRepeat(time => {
+      if (!this.enabled || !this.activeNotes.size) return;
+
+      let note;
+      if (this.arpMode === 'random') {
+        const arr = [...this.activeNotes];
+        note = arr[Math.floor(Math.random() * arr.length)];
+      } else {
+        const seq = [...this.activeNotes].sort(
+          (a, b) => NOTE_ORDER.indexOf(a) - NOTE_ORDER.indexOf(b)
+        );
+        if (this.arpMode === 'down') seq.reverse();
+        const idx = this._arpIndex % seq.length;
+        note = seq[idx];
+        this._arpIndex = (idx + 1) % seq.length;
+      }
+
+      try { this.voice.triggerAttackRelease(note, dur, time); } catch (_) {}
+    }, this.arpRate);
+  }
+
+  _stopArp() {
+    if (this._arpEvent !== null) {
+      try { Tone.Transport.clear(this._arpEvent); } catch (_) {}
+      this._arpEvent = null;
+    }
+    this._arpIndex = 0;
+  }
+
+  // ── Notas ─────────────────────────────────────────────────────────────────
 
   async playNote(note) {
     if (!this.enabled) return;
     Tone.start().catch(() => {});
+
     if (this.hold) {
+      // Hold: toggle nota en pool. El arp usa el pool; sin arp, el voice suena directo.
       if (this.activeNotes.has(note)) {
-        this.voice.triggerRelease(note);
         this.activeNotes.delete(note);
+        if (!this.arpEnabled) this.voice.triggerRelease(note);
       } else {
-        this.voice.triggerAttack(note);
         this.activeNotes.add(note);
+        if (!this.arpEnabled) this.voice.triggerAttack(note);
       }
+    } else if (this.arpEnabled) {
+      // Arp sin hold: la nota entra al pool en keydown y sale en keyup (_handleKeyUp).
+      this.activeNotes.add(note);
     } else {
       this.voice.triggerAttackRelease(note, 1.2);
     }
+
     this._emit();
   }
 
-  _buildVoice() {
+  releaseAll() {
+    try { this.voice?.releaseAll(); } catch (_) {}
+    this.activeNotes.clear();
+    this._arpIndex = 0;
+    this._emit();
+  }
+
+  dispose() {
+    this._stopArp();
     this.releaseAll();
+    window.removeEventListener('keydown', this._onKeyDown);
+    window.removeEventListener('keyup',   this._onKeyUp);
+    try { this.voice?.dispose();  } catch (_) {}
+    try { this.filter?.dispose(); } catch (_) {}
+    try { this.reverb?.dispose(); } catch (_) {}
+  }
+
+  // ── Internos ──────────────────────────────────────────────────────────────
+
+  _buildVoice() {
+    // Preservar notas activas para reatacarlas en el nuevo voice
+    const notasActivas = [...this.activeNotes];
+    try { this.voice?.releaseAll(); } catch (_) {}
     if (this.voice) {
       try { this.voice.dispose(); } catch (_) {}
     }
@@ -136,17 +243,24 @@ export class PlayableSynth {
         : Tone.Synth;
     this.voice = new Tone.PolySynth(Voice, {
       maxPolyphony: 10,
-      oscillator: { type: this.waveform },
-      envelope: this._envelope(),
+      oscillator:  { type: this.waveform },
+      envelope:    this._envelope(),
     });
     this.voice.volume.value = this.volume;
     this.voice.connect(this.filter);
+
+    // Reatacar notas que estaban activas (hold sin arp); el arp las retoma automáticamente
+    if (!this.arpEnabled && this.hold && notasActivas.length) {
+      for (const note of notasActivas) {
+        try { this.voice.triggerAttack(note); } catch (_) {}
+      }
+    }
   }
 
   _envelope() {
     return {
-      attack: this.attack,
-      decay: this.decay,
+      attack:  this.attack,
+      decay:   this.decay,
       sustain: this.sustain,
       release: this.release,
     };
@@ -164,7 +278,7 @@ export class PlayableSynth {
     if (!note || this.hold || isTypingTarget(event.target)) return;
     event.preventDefault();
     if (this.activeNotes.has(note)) {
-      this.voice.triggerRelease(note);
+      if (!this.arpEnabled) this.voice.triggerRelease(note);
       this.activeNotes.delete(note);
       this._emit();
     }
@@ -180,7 +294,6 @@ function isTypingTarget(target) {
   const tag = target?.tagName?.toLowerCase();
   if (tag === 'input') {
     const type = target.type?.toLowerCase();
-    // Block only if it's a typing input, not a slider or checkbox
     return ['text', 'number', 'password', 'email', 'search'].includes(type);
   }
   return ['select', 'textarea'].includes(tag) || target?.isContentEditable;

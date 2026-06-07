@@ -94,6 +94,17 @@ export function buildPlayableSynthCard(synth) {
         <option value="square">CUADRADA</option>
       </select></label>
     </div>
+    <div class="arp-row">
+      <button type="button" data-action="arp-toggle">ARP</button>
+      <button type="button" data-action="arp-up" class="active">UP</button>
+      <button type="button" data-action="arp-down">DOWN</button>
+      <button type="button" data-action="arp-rnd">RND</button>
+      <select data-param="arp-rate">
+        <option value="4n">1/4</option>
+        <option value="8n" selected>1/8</option>
+        <option value="16n">1/16</option>
+      </select>
+    </div>
   `;
 
   const power = card.querySelector('[data-action="power"]');
@@ -104,6 +115,24 @@ export function buildPlayableSynthCard(synth) {
   release.addEventListener('click', () => synth.releaseAll());
   card.querySelector('[data-param="mode"]').addEventListener('change', event => synth.setMode(event.target.value));
   card.querySelector('[data-param="waveform"]').addEventListener('change', event => synth.setWaveform(event.target.value));
+
+  const arpToggle = card.querySelector('[data-action="arp-toggle"]');
+  const arpUp     = card.querySelector('[data-action="arp-up"]');
+  const arpDown   = card.querySelector('[data-action="arp-down"]');
+  const arpRnd    = card.querySelector('[data-action="arp-rnd"]');
+  const arpRate   = card.querySelector('[data-param="arp-rate"]');
+
+  arpToggle.addEventListener('click', () => synth.setArpEnabled(!synth.arpEnabled));
+  arpUp.addEventListener('click',  () => { synth.setArpMode('up');     _syncArpMode('up'); });
+  arpDown.addEventListener('click',() => { synth.setArpMode('down');   _syncArpMode('down'); });
+  arpRnd.addEventListener('click', () => { synth.setArpMode('random'); _syncArpMode('random'); });
+  arpRate.addEventListener('change', () => synth.setArpRate(arpRate.value));
+
+  function _syncArpMode(mode) {
+    arpUp.classList.toggle('active',   mode === 'up');
+    arpDown.classList.toggle('active', mode === 'down');
+    arpRnd.classList.toggle('active',  mode === 'random');
+  }
   for (const key of card.querySelectorAll('.key-map button')) {
     key.addEventListener('click', () => synth.playNote(key.dataset.note));
   }
@@ -154,6 +183,9 @@ export function buildPlayableSynthCard(synth) {
       const pitch = key.dataset.note;
       key.classList.toggle('active', state.activeNotes.includes(pitch));
     }
+    arpToggle.classList.toggle('active', state.arp.enabled);
+    _syncArpMode(state.arp.mode);
+    arpRate.value = state.arp.rate;
   });
 
   return card;
