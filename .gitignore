@@ -25,3 +25,9 @@ Thumbs.db
 
 # Documentación interna
 BITACORA.md
+
+# Lab virtual environment
+lab/.venv/
+lab/01_vae_timbre/datos/
+*.npy
+*.pt
