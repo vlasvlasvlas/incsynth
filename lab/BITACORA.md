@@ -691,6 +691,35 @@ rave train --config v2 --db_path corpus/preprocessed/ --name incsynth_rave
 # corriendo — tiempo estimado: 2-4 horas en M4 Pro
 ```
 
+## 2026-06-07 — Infraestructura Colab para entrenamiento RAVE
+
+### Contexto
+
+RAVE no soporta MPS (Apple Silicon). El training local en CPU no es viable (días). Se preparó todo para entrenar en Google Colab con GPU T4.
+
+### Qué se creó
+
+`lab/06_rave_colab/`
+- `rave_train_incsynth.ipynb` — notebook Colab listo para correr: verifica GPU, instala RAVE, monta Drive, copia corpus, preprocesa, entrena (1M pasos), exporta `.ts` + `.onnx`, guarda en Drive.
+- `PASOS.md` — guía paso a paso completa: subir corpus, correr Colab, descargar modelo, qué hacer después.
+
+### Parámetros de training
+
+- Config: `v2` (RAVE v2 — variational, mejor calidad)
+- max_steps: 1.000.000 (suficiente para primera versión funcional, ~3-4h en T4)
+- val_every: 10.000 (checkpoint cada 10k pasos)
+
+### Estado del proyecto al cierre de sesión
+
+| Fase | Estado |
+|------|--------|
+| 1-4 (VAE/LSTM/GNN/FFT) | ✅ Corriendo en browser y GitHub Pages |
+| 5 RAVE Corpus | ✅ 502 chunks, 25 min, en `lab/corpus/` |
+| 5 RAVE Modelo | ⏳ Pendiente entrenamiento en Colab |
+| 5 RAVE Browser | ⏸ Pendiente modelo entrenado |
+| 6 MARL Reward | ✅ Función diseñada en `marl/rewardFunction.js` |
+| 6 MARL Training | ⏸ Pendiente 5+ logs de sesión |
+
 <!-- 
 PLANTILLA PARA NUEVAS ENTRADAS:
 
