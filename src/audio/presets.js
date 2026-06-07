@@ -234,8 +234,8 @@ export const PRESETS = {
 };
 
 export const DEFAULTS = {
-  cuerdas:   'ARCO',
-  percusion: 'PULSO_FM',
-  melodia:   'FLAUTA',
+  cuerdas:   'VOCODER',
+  percusion: 'SPACE_LADY',
+  melodia:   'VANGELIS',
   mallets:   'GAMELAN',
 };

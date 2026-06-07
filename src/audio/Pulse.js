@@ -4,14 +4,14 @@ export class Pulse {
   constructor() {
     this.degradacion = 0;
     this._note = 'C6';
-    this._waveform = 'triangle';
+    this._waveform = 'sine';
     this._kickEnabled = false;
     this._step = 0;
     this._synth = new Tone.Synth({
       oscillator: { type: this._waveform },
       envelope: { attack: 0.002, decay: 0.1, sustain: 0, release: 0.05 },
     }).toDestination();
-    this._synth.volume.value = -18;
+    this._synth.volume.value = -23;
     this._kick = new Tone.MembraneSynth({
       pitchDecay: 0.055,
       octaves: 7,
