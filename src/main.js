@@ -989,7 +989,7 @@ function buildRitmoCard(getEngine) {
     option.textContent = label;
     timbreSel.appendChild(option);
   });
-  timbreSel.value = 'triangle';
+  timbreSel.value = 'sine';
   timbreSel.addEventListener('change', () => getEngine()?._pulse?.setWaveform(timbreSel.value));
   timbreRow.appendChild(timbreLbl);
   timbreRow.appendChild(timbreSel);
@@ -1017,9 +1017,9 @@ function buildRitmoCard(getEngine) {
   const pulsoLbl = document.createElement('span'); pulsoLbl.className = 'lente-label'; pulsoLbl.textContent = 'PULSO';
   const pulsoControl = document.createElement('div'); pulsoControl.className = 'ritmo-pulso-input';
   const pulsoSlider = document.createElement('input');
-  pulsoSlider.type = 'range'; pulsoSlider.min = -40; pulsoSlider.max = 0; pulsoSlider.step = 1; pulsoSlider.value = -18;
+  pulsoSlider.type = 'range'; pulsoSlider.min = -40; pulsoSlider.max = 0; pulsoSlider.step = 1; pulsoSlider.value = -23;
   pulsoSlider.setAttribute('aria-label', 'Volumen del golpe agudo');
-  pulsoSlider.title = '-18 dB';
+  pulsoSlider.title = '-23 dB';
   let kickEnabled = false;
   const kickBtn = document.createElement('button');
   kickBtn.type = 'button';
