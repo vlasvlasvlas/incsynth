@@ -22,7 +22,7 @@ OUTPUT_PATH = os.path.join(PROJECT_ROOT, "src", "ai", "pesos", "vae_decoder.json
 
 def main():
     # Cargar modelo entrenado
-    model = VAE(input_dim=8, hidden=64, latent=4)
+    model = VAE(input_dim=8, hidden=128, latent=4)
     weights_path = os.path.join(DATA_DIR, "vae_full.pt")
     model.load_state_dict(torch.load(weights_path, map_location="cpu", weights_only=True))
     model.eval()

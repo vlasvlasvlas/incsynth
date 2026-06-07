@@ -22,6 +22,8 @@ import config from './data/config.json';
 import patrones from './data/patterns.json';
 import mappings from './data/mappings.json';
 import paisesData from './data/paises.json';
+import * as cuartoMusico from './ai/cuartoMusico.js';
+import { buildCuartoMusicoCard } from './ui/cuartoMusicoControl.js';
 
 const SOURCE_EXPLAINERS = {
   clima: {
@@ -75,6 +77,9 @@ async function init() {
   setInterval(() => { climaFuente.tick(); mercadoFuente.tick(); noticiasFuente.tick(); }, 800);
 
   const fuentes = { clima: climaFuente, mercado: mercadoFuente, noticias: noticiasFuente };
+
+  // ── Inicializar IA ──
+  await cuartoMusico.init();
 
   // ── Instrumentos (auto-conectados) ──
   const instIds   = Object.keys(config.instrumentos);
@@ -212,6 +217,7 @@ async function init() {
 
   // Lente país
   tableroEl.appendChild(buildLenteCard(paisesData, lenteFuente, instrumentos));
+  tableroEl.appendChild(buildCuartoMusicoCard(cuartoMusico));
 
   // Timbres
   const sonidoPanel = buildSonidoCard(instIds, config.instrumentos, instrumentos, () => engine);
