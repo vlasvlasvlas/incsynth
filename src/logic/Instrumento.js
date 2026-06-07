@@ -1,5 +1,6 @@
 import { ESTADOS, transicionar } from './StateMachine.js';
 import { clamp, lerp, round2, nowMs, randomBetween } from '../utils.js';
+import * as cuartoMusico from '../ai/cuartoMusico.js';
 
 export class Instrumento {
   constructor(id, sala, mapeo, umbrales, pesos) {
@@ -113,6 +114,7 @@ export class Instrumento {
       this._lastDecision = this.estado === ESTADOS.RETENIDO ? 'RETENIDO: repite patron' : `${this.estado}: no avanza`;
       this.sala.actualizarPosicion(this.id, this.posicion, false);
       this._registrarDecision(false);
+      cuartoMusico.registrarCiclo(this.id, this, this.sala, false);
       return false;
     }
 
@@ -128,6 +130,7 @@ export class Instrumento {
       this._lastDecision = 'REPITE el patron actual';
     }
     this._registrarDecision(avanzo);
+    cuartoMusico.registrarCiclo(this.id, this, this.sala, avanzo);
     return avanzo;
   }
 
@@ -140,6 +143,7 @@ export class Instrumento {
     this.sala.actualizarPosicion(this.id, this.posicion, true);
     this._lastDecision = `AVANZO: ${motivo}`;
     this._registrarDecision(true);
+    cuartoMusico.registrarCiclo(this.id, this, this.sala, true);
     return true;
   }
 
@@ -178,6 +182,54 @@ export class Instrumento {
     if (Math.abs(bias) > Math.abs(breakdown[breakdown.motivo] ?? 0)) {
       breakdown.motivo = bias >= 0 ? 'control' : 'freno_manual';
     }
+    const iaEstilo = cuartoMusico.getDecisionIA(this, this.sala);
+    if (iaEstilo) {
+      const delta = clamp(iaEstilo.delta ?? 0, -0.12, 0.12);
+      breakdown.iaEstilo = round2(delta);
+      breakdown.iaSorpresa = round2(iaEstilo.sorpresa ?? 0);
+      breakdown.iaConfianza = round2(iaEstilo.confianza ?? 0);
+      breakdown.iaMotivo = iaEstilo.motivo;
+      breakdown.iaDetalle = iaEstilo.detalles || [];
+      breakdown.raw = round2((breakdown.raw ?? breakdown.p) + delta);
+      breakdown.p = clamp(breakdown.p + delta, 0, 1);
+      if (Math.abs(delta) > Math.abs(breakdown[breakdown.motivo] ?? 0)) {
+        breakdown.motivo = 'ia_estilo';
+      }
+    } else {
+      breakdown.iaEstilo = 0;
+      breakdown.iaSorpresa = 0;
+      breakdown.iaConfianza = 0;
+    }
+
+    // GNN Social — presión de grafo (alpha > 50%)
+    const gnnResult = cuartoMusico.getPresionGNN(this, this.sala);
+    if (gnnResult) {
+      const delta = clamp(gnnResult.delta ?? 0, -0.08, 0.08);
+      breakdown.gnn = round2(delta);
+      breakdown.gnnPressure = round2(gnnResult.pressure ?? 0.5);
+      breakdown.raw = round2((breakdown.raw ?? breakdown.p) + delta);
+      breakdown.p   = clamp(breakdown.p + delta, 0, 1);
+      if (Math.abs(delta) > Math.abs(breakdown[breakdown.motivo] ?? 0)) {
+        breakdown.motivo = 'gnn_social';
+      }
+    } else {
+      breakdown.gnn = 0;
+      breakdown.gnnPressure = 0.5;
+    }
+
+    // YAMNet — escucha ambiente (toggle independiente)
+    const yamnetDelta = cuartoMusico.getDeltaYamnet();
+    if (yamnetDelta !== 0) {
+      breakdown.yamnet = round2(yamnetDelta);
+      breakdown.raw    = round2((breakdown.raw ?? breakdown.p) + yamnetDelta);
+      breakdown.p      = clamp(breakdown.p + yamnetDelta, 0, 1);
+      if (Math.abs(yamnetDelta) > Math.abs(breakdown[breakdown.motivo] ?? 0)) {
+        breakdown.motivo = 'yamnet_ambiente';
+      }
+    } else {
+      breakdown.yamnet = 0;
+    }
+
     this._aplicarMaduracionTemporal(breakdown);
     return breakdown;
   }

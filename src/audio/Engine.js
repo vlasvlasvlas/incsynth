@@ -154,19 +154,24 @@ export class AudioEngine {
       const cutoff = 900 + Math.max(ui.muta, inst._manualMuta ?? 0) * 13500;
       this.filtros[id].frequency.rampTo(cutoff, 0.3);
 
+      const presetConf = PRESETS[this._presetKeys?.[id]]?.config || {};
+      const presetParams = {
+        attack:         presetConf.envelope?.attack ?? 0.1,
+        decay:          presetConf.envelope?.decay ?? 0.5,
+        sustain:        presetConf.envelope?.sustain ?? 0.5,
+        release:        presetConf.envelope?.release ?? 1.0,
+        filterCut:      cutoff,
+        harmonicity:    presetConf.harmonicity ?? 1,
+        modIndex:       presetConf.modulationIndex ?? 5,
+        oscillatorType: presetConf.oscillator?.type,
+      };
+
       // Cuarto Músico: VAE de timbre modula parámetros de síntesis
       const vaeParams = cuartoMusico.getTimbreIA(inst, this.sala);
       if (vaeParams) {
-        const presetConf = PRESETS[this._presetKeys?.[id]]?.config || {};
-        cuartoMusico.aplicarTimbre(this.synths[id], this.filtros[id], vaeParams, {
-          attack:      presetConf.envelope?.attack ?? 0.1,
-          decay:       presetConf.envelope?.decay ?? 0.5,
-          sustain:     presetConf.envelope?.sustain ?? 0.5,
-          release:     presetConf.envelope?.release ?? 1.0,
-          filterCut:   cutoff,
-          harmonicity: presetConf.harmonicity ?? 1,
-          modIndex:    presetConf.modulationIndex ?? 5,
-        });
+        cuartoMusico.aplicarTimbre(this.synths[id], this.filtros[id], vaeParams, presetParams);
+      } else {
+        cuartoMusico.restaurarTimbre(this.synths[id], this.filtros[id], presetParams);
       }
 
       // Volumen base + ajuste por estado y audibilidad

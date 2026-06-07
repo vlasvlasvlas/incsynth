@@ -12,6 +12,7 @@
     "vite": "^5.2.0"
   },
   "dependencies": {
+    "@tensorflow/tfjs": "^4.22.0",
     "tone": "^14.7.77"
   }
 }

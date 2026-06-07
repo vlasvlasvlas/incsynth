@@ -338,8 +338,8 @@ clave.
 
 ## Sintetizador acompañante
 
-Existe una cuarta voz manual que no participa de las decisiones autónomas de la
-sala. Sirve para acompañar la obra con notas sostenidas o drones.
+Existe una voz manual adicional que no participa de las decisiones autónomas de
+la sala. Sirve para acompañar la obra con notas sostenidas o drones.
 
 Las teclas numéricas forman una escala ascendente de Do:
 
@@ -369,6 +369,86 @@ Controles disponibles:
 - volumen.
 
 En modo HOLD, una tecla activa la nota y una segunda pulsación la libera.
+
+## Cuarto músico
+
+La app incluye una capa opcional de IA llamada **CUARTO MÚSICO**. No agrega un
+instrumentista nuevo ni reemplaza las reglas de la sala: escucha a los tres
+músicos y modula el sistema según el nivel del dial.
+
+La tarjeta de control tiene un switch master **IA ON/OFF** y un dial de
+intensidad (0–100%). OFF fuerza 0%; ON vuelve al último nivel activo.
+
+### Cómo funciona cada capa
+
+```
+0%   → reglas puras (sin IA)
+>10% → Capa 1: VAE Timbre
+>30% → Capa 2: LSTM de Estilo (suma Capa 1)
+>50% → Capa 3: GNN Social     (suma Capas 1 y 2)
+tog  → Capa 4: Escucha FFT    (toggle independiente del dial)
+```
+
+Cada capa agrega o sustrae un pequeño delta (±0.08–0.12) a la probabilidad de
+avance del instrumento. Las capas no se reemplazan: se acumulan.
+
+#### Capa 1 — VAE de Timbre (>10%)
+
+Un autoencoder variacional entrenado offline mapea el estado del músico
+(posición, audibilidad, retención, volatilidad) a un punto en un espacio de 4
+dimensiones. El decoder produce parámetros de síntesis FM/AM (harmonicidad,
+índice de modulación, filtro, envolvente) que se interpolan suavemente desde el
+preset base.
+
+Resultado: el timbre muta de forma continua según el contexto. Un músico
+desbordado suena diferente a uno periférico. El cambio es audible, no computable.
+
+#### Capa 2 — LSTM de Estilo Temporal (>30%)
+
+Cada músico mantiene en memoria los últimos 20 ciclos de los demás (9 features:
+posición, estado, señal, verbos, repeticiones). Un LSTM pequeño —entrenado en
+vivo en el navegador— aprende a predecir si cada compañero avanzará o repetirá.
+
+La diferencia entre predicción y acción real es la **sorpresa**. Cuando un
+músico es más impredecible de lo esperado, eso empuja ligeramente hacia adelante;
+cuando es muy predecible (sorpresa baja), frena. El sistema arranca sin saber
+nada y calibra su confianza a medida que acumula muestras (~3 minutos para
+confianza máxima).
+
+#### Capa 3 — GNN Social (>50%)
+
+Un grafo de 3 nodos (uno por músico) con message-passing en JS puro. Cada nodo
+agrega las diferencias de feature con sus vecinos, aplica una transformación
+lineal + ReLU y produce una presión social: ¿cuánto te están "jalando" o
+"frenando" los otros desde la perspectiva de la red?
+
+Resultado: emergen roles dinámicos. Dos músicos pueden estar "pegados" mientras
+el tercero explora por delante. El líder recibe freno suave; los rezagados,
+impulso. Los roles rotan a medida que la partitura avanza.
+
+#### Capa 4 — Escucha Ambiente FFT (toggle independiente)
+
+Analiza el audio del micrófono del oyente con Web Audio API (sin modelo ML).
+Clasifica el entorno en bandas de frecuencia y lo traduce a verbos musicales:
+
+| Condición de la sala | Verbo → Efecto |
+|---|---|
+| Silencio total | RETIENE → frena los músicos |
+| Impulso súbito (aplauso, golpe) | ENTRA → impulso de avance |
+| Graves dominantes (tráfico, bajo) | AVANZA → presión de avance |
+| Estática o agudos aislados | SALE → retira presión |
+| Ambiente suave general | RETIENE leve |
+
+El oyente pasa a ser parte de la obra sin saberlo.
+
+### Session Logger
+
+Siempre activo. Registra cada ciclo de decisión (posición, motivo, z-vector VAE,
+predicción LSTM, presión GNN, verbo FFT) en RAM y hace backup a `localStorage`
+cada 30 eventos. El botón **GUARDAR LOG** descarga el JSON completo.
+
+Esos logs son la materia prima para las fases futuras: entrenar RAVE con audio
+real del sistema y diseñar la política de aprendizaje por refuerzo (MARL).
 
 ## Visualizaciones
 
@@ -408,6 +488,7 @@ Incluye:
 src/
 ├── audio/
 │   ├── Engine.js             Secuenciación autónoma con Tone.js
+│   ├── raveCapture.js        Grabación de audio para corpus RAVE
 │   ├── PlayableSynth.js      Sintetizador manual 1–0
 │   ├── Pulse.js              Pulso compartido
 │   └── presets.js            Presets de síntesis
@@ -417,6 +498,17 @@ src/
 │   ├── paises.json           Países e indicadores oficiales
 │   └── patterns.json         Los 53 patrones
 ├── data-sources/             Adaptadores de APIs públicas
+├── ai/
+│   ├── cuartoMusico.js       Orquestador: dial, capas, logger
+│   ├── vaeTimbre.js          Capa 1: decoder VAE de timbre en JS puro
+│   ├── lstmEstilo.js         Capa 2: LSTM online de estilo temporal
+│   ├── gnnSocial.js          Capa 3: GNN de roles sociales en JS puro
+│   ├── yamnet.js             Capa 4: Escucha ambiente por FFT (Web Audio)
+│   ├── sessionLogger.js      Logger de ciclos para calibración y RAVE/MARL
+│   ├── marl/
+│   │   └── rewardFunction.js Función de recompensa MARL (Fase 6)
+│   └── pesos/
+│       └── vae_decoder.json  Pesos del decoder VAE (205 KB)
 ├── logic/
 │   ├── Instrumento.js        Memoria y decisión individual
 │   ├── LaSala.js             Convivencia y escucha compartida
@@ -424,8 +516,14 @@ src/
 ├── ui/
 │   ├── CircleView.js         Vista radial
 │   ├── PartituraView.js      Vista horizontal
+│   ├── cuartoMusicoControl.js Control del cuarto músico
 │   └── controls.js           Controles del sidebar
 └── main.js                   Composición e integración general
+
+lab/
+├── 01_vae_timbre/            Scripts de entrenamiento VAE (PyTorch/MPS)
+└── 05_rave/
+    └── preparar_corpus.py   Convierte audio.webm + sync.json → chunks WAV
 ```
 
 ## Ejecución local

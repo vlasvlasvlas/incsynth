@@ -1318,3 +1318,153 @@ body.dark-theme #circle-container {
   0%, 100% { opacity: 0.6; }
   50% { opacity: 1; }
 }
+/* Cuarto Músico Card */
+.cuarto-musico-card {
+  padding: 10px;
+  background: rgba(30, 30, 30, 0.7);
+  border: 1px solid #444;
+  margin-bottom: 15px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+}
+.cuarto-musico-card h3 {
+  margin: 0 0 10px 0;
+  color: #7289da;
+  font-size: 14px;
+}
+.cm-status {
+  margin-bottom: 10px;
+  color: #fff;
+  font-weight: bold;
+}
+.cm-master-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #7289da;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.cm-master-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: #7289da;
+}
+.cm-note {
+  margin-bottom: 15px;
+  color: #aaa;
+  font-size: 11px;
+}
+.cm-dial-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.cm-dial-container input[type="range"] {
+  flex-grow: 1;
+}
+.cm-dial-container span {
+  width: 35px;
+  text-align: right;
+  color: #7289da;
+}
+.cm-models {
+  color: #888;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-line;
+  margin-bottom: 10px;
+}
+.cm-yamnet-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.cm-yamnet-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: #2cc0a0;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.cm-yamnet-label input {
+  width: 14px;
+  height: 14px;
+  accent-color: #2cc0a0;
+}
+.cm-yamnet-status {
+  color: #2cc0a0;
+  font-size: 10px;
+  opacity: 0.8;
+}
+.cm-logger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #333;
+}
+.cm-logger-info {
+  color: #666;
+  font-size: 10px;
+}
+.cm-download-btn {
+  background: transparent;
+  border: 1px solid #444;
+  color: #7289da;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.cm-download-btn:hover {
+  background: rgba(114, 137, 218, 0.15);
+  border-color: #7289da;
+}
+.cm-rave-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.cm-rave-btn {
+  background: transparent;
+  border: 1px solid #e05c9a;
+  color: #e05c9a;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.cm-rave-btn:hover {
+  background: rgba(224, 92, 154, 0.15);
+}
+.cm-rave-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.cm-rave-info {
+  color: #e05c9a;
+  font-size: 9px;
+  opacity: 0.85;
+}
+.cm-reward-panel {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #2a2a2a;
+  min-height: 14px;
+  line-height: 1.4;
+}

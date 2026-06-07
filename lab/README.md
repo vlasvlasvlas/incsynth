@@ -24,19 +24,19 @@ Todo corre en el browser. No hay backend. GitHub Pages sobrevive.
 
 | # | Modelo | Qué hace | Pesos | Estado |
 |---|--------|----------|-------|--------|
-| 1 | **VAE Timbre** | El timbre muta con el contexto | 15 KB | 🔜 Próximo |
-| 2 | **LSTM Estilo** | Los músicos se "conocen" en vivo | 80 KB | ⬜ Pendiente |
-| 3 | **GNN Social** | Roles emergentes (líder/seguidor) | 8 KB | ⬜ Pendiente |
-| 4 | **YAMNet Ambiente** | El micrófono alimenta la obra | 900 KB | ⬜ Pendiente |
-| 5 | **RAVE Audio** | Síntesis neural orgánica | 5-20 MB | ⬜ Pendiente |
-| 6 | **MARL Agentes** | Autonomía total con RL | 50 KB | ⬜ Pendiente |
+| 1 | **VAE Timbre** | El timbre muta con el contexto | 205 KB | ✅ Completado |
+| 2 | **LSTM Estilo** | Los músicos se "conocen" en vivo | sin pesos · TFJS lazy 305 KB gzip | 🟡 Implementación inicial |
+| 3 | **GNN Social** | Roles emergentes (líder/seguidor) | 8 KB | 🟡 Implementación inicial |
+| 4 | **Escucha Ambiente FFT** | El micrófono alimenta la obra (Web Audio API, sin modelo ML) | 0 KB | 🟡 Implementación inicial |
+| 5 | **RAVE Audio** | Síntesis neural orgánica | 5-20 MB | 🟡 Infraestructura lista (captura + corpus) |
+| 6 | **MARL Agentes** | Autonomía total con RL | 50 KB | 🟡 Función de reward implementada |
 
 ## Máquina de entrenamiento
 
 MacBook Pro 14" (Nov 2024) — **Apple M4 Pro** — **48 GB RAM** — macOS Sequoia 15.6.1.  
 PyTorch con MPS (Metal Performance Shaders) para GPU local.
 
-## Cómo entrenar (cuando esté implementado)
+## Cómo re-entrenar el VAE (Fase 1)
 
 ```bash
 cd lab/01_vae_timbre
@@ -63,6 +63,17 @@ lab/
 src/ai/
 ├── cuartoMusico.js        ← Toggle + dial de influencia (0-100%)
 ├── vaeTimbre.js           ← Decoder VAE en JS
+├── lstmEstilo.js          ← LSTM online de estilo temporal
+├── gnnSocial.js           ← GNN social message-passing en JS puro
+├── yamnet.js              ← Escucha ambiente FFT (Web Audio API, bandas espectrales)
+├── marl/
+│   └── rewardFunction.js  ← Función de recompensa MARL (Fase 6)
+└── ...
+
+src/audio/
+├── Engine.js
+├── raveCapture.js         ← Grabador de audio para corpus RAVE (Fase 5)
+├── sessionLogger.js       ← Logger siempre activo, exporta JSON
 └── pesos/                 ← JSONs con pesos exportados
 ```
 

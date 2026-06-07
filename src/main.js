@@ -98,8 +98,8 @@ async function init() {
     inst._nombre    = cfg.nombre || id;
     inst._desc      = cfg.descripcion || '';
     inst._fuenteId  = fid;
-    inst._volumenDb = PRESETS[inst._presetKey]?.volume ?? -18;
     inst._presetKey = DEFAULTS[id] || 'ARCO';
+    inst._volumenDb = PRESETS[inst._presetKey]?.volume ?? -18;
     inst._manualSignal = 0;
     inst._manualBlend = 0;
     inst._advanceBias = 0;
@@ -110,6 +110,13 @@ async function init() {
     sala.registrarInstrumento(id, 0);
     inst.conectarFuentes([{ id: `${fid}_A`, tipo: fid, source: fuentes[fid], mapeo }]);
   }
+  cuartoMusico.configurarContexto(instrumentos, sala);
+
+  // Iniciar logger de sesión con metadata disponible
+  cuartoMusico.iniciarSesion({
+    ciudad:  climaFuente._ciudad || 'Buenos Aires',
+    fuentes: Object.fromEntries(instIds.map((id, i) => [id, fuenteIds[i]])),
+  });
 
   const setInstrumentSource = (id, fid) => {
     const inst = instrumentos[id];
@@ -450,6 +457,9 @@ function renderBreakdownBars(b) {
     ['forma', b.geometria || 0, '#007f79'],
     ['escucha', b.escucha || 0, '#9a4f12'],
     ['secuencia', b.secuencia || 0, '#7a5b22'],
+    ['ia', b.iaEstilo || 0, '#7289da'],
+    ['red', b.gnn || 0, '#e05c9a'],
+    ['mic', b.yamnet || 0, '#2cc0a0'],
     ['control', b.bias || 0, '#7a35cc'],
     ['freno', -b.freno, '#cc2200'],
   ];
@@ -490,11 +500,14 @@ function readableMotivo(motivo) {
     geometria: 'forma de la sala',
     escucha: 'escucha vecinal',
     secuencia: 'secuencia',
+    ia_estilo: 'estilo temporal',
     maduracion: 'maduración',
     tiempo: 'tiempo habitado',
     control: 'control manual',
     freno_manual: 'freno manual',
     freno: 'freno',
+    gnn_social: 'red social',
+    yamnet_ambiente: 'escucha ambiente',
   })[motivo] || 'mixto';
 }
 
@@ -570,10 +583,13 @@ function humanDecision(estado, motivo, closest) {
   if (motivo === 'forma de la sala') return `la forma común cambió su decisión; ${relation}`;
   if (motivo === 'escucha vecinal') return `ajusta su paso después de escuchar a los otros; ${relation}`;
   if (motivo === 'secuencia') return `la repetición acumulada pide transformar el patrón; ${relation}`;
+  if (motivo === 'estilo temporal') return `el cuarto músico anticipa el estilo reciente; ${relation}`;
   if (motivo === 'maduración') return `todavía habita y escucha este patrón; ${relation}`;
   if (motivo === 'tiempo habitado') return `el tiempo acumulado habilita el avance; ${relation}`;
   if (motivo === 'freno') return `se frena por alejarse demasiado; ${relation}`;
   if (motivo === 'control manual') return `gesto del convocante altera su escucha; ${relation}`;
+  if (motivo === 'red social') return `la red de músicos lo presiona a moverse; ${relation}`;
+  if (motivo === 'escucha ambiente') return `el sonido del espacio modula su decisión; ${relation}`;
   return `${estado}; ${relation}`;
 }
 

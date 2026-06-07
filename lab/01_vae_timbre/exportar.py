@@ -6,7 +6,7 @@ Lee los pesos de PyTorch y genera un archivo JSON con:
 - Los rangos de desnormalización
 - Metadata del modelo
 
-El archivo resultante pesa ~15KB y se carga en src/ai/pesos/vae_decoder.json.
+El archivo resultante pesa ~205KB y se carga en src/ai/pesos/vae_decoder.json.
 """
 
 import os
@@ -46,7 +46,7 @@ def main():
     export = {
         "version": 1,
         "description": "VAE decoder for timbre space — In C / Mundo Real",
-        "architecture": "4 → 32 (ReLU) → 64 (ReLU) → 8 (Sigmoid)",
+        "architecture": "4 → 64 (ReLU) → 128 (ReLU) → 8 (Sigmoid)",
         "latent_dim": 4,
         "output_dim": 8,
         "param_names": meta["param_names"],
