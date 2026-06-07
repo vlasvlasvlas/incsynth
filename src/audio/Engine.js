@@ -84,7 +84,7 @@ export class AudioEngine {
       synth = new Tone.Synth().connect(filtro);
     }
 
-    synth.volume.value = preset.volume ?? -18;
+    synth.volume.value = this.instrumentos[id]?._volumenDb ?? preset.volume ?? -18;
     this.synths[id]  = synth;
     this.filtros[id] = filtro;
     this._presetKeys = this._presetKeys || {};
@@ -155,7 +155,7 @@ export class AudioEngine {
 
       // Volumen base + ajuste por estado y audibilidad
       const preset   = PRESETS[this._presetKeys?.[id]] || {};
-      let   volBase  = (preset.volume ?? -18) + (inst._volumenDb ?? 0);
+      let   volBase  = inst._volumenDb ?? (preset.volume ?? -18);
       if (ui.audibilidad < 0.3)  volBase -= 14;
       else if (ui.audibilidad < 0.7) volBase -= 5;
       if (ui.estado === ESTADOS.DESBORDADO)  volBase += 3;

@@ -93,7 +93,7 @@ async function init() {
     inst._nombre    = cfg.nombre || id;
     inst._desc      = cfg.descripcion || '';
     inst._fuenteId  = fid;
-    inst._volumenDb = 0;
+    inst._volumenDb = PRESETS[inst._presetKey]?.volume ?? -18;
     inst._presetKey = DEFAULTS[id] || 'ARCO';
     inst._manualSignal = 0;
     inst._manualBlend = 0;
@@ -811,8 +811,20 @@ function buildSonidoCard(instIds, instConfig, instrumentos, getEngine) {
     }
     dlbl.textContent = PRESETS[sel.value]?.desc || '';
     sel.addEventListener('change', () => {
-      dlbl.textContent = PRESETS[sel.value]?.desc || '';
+      const preset = PRESETS[sel.value];
+      dlbl.textContent = preset?.desc || '';
       inst._presetKey = sel.value;
+      
+      const newVol = preset?.volume ?? -18;
+      inst._volumenDb = newVol;
+      const volInput = row.querySelector('input[type="range"]');
+      if (volInput) {
+        volInput.value = newVol;
+        // update the bold label span which is the next sibling
+        const volVal = volInput.nextElementSibling;
+        if (volVal) volVal.textContent = `${Math.round(newVol)} dB`;
+      }
+      
       const eng = getEngine();
       if (eng && eng._running) eng.cambiarPreset(id, sel.value);
     });
@@ -850,7 +862,7 @@ function buildSonidoCard(instIds, instConfig, instrumentos, getEngine) {
     const mutaRow = makeRange('TIMBRE', 0, 1, 0.01, inst._manualMuta ?? 0, v => v.toFixed(2), v => { inst._manualMuta = v; touchInst(); });
     const glowRow = makeRange('AURA', 0.2, 3, 0.05, inst._glowRadius ?? 1, v => `${v.toFixed(1)}x`, v => { inst._glowRadius = v; touchInst(); });
     const lightRow = makeRange('BRILLO', 0.4, 2.5, 0.05, inst._lightGain ?? 1, v => `${v.toFixed(1)}x`, v => { inst._lightGain = v; touchInst(); });
-    const volRow = makeRange('VOL', -18, 12, 1, inst._volumenDb ?? 0, v => `${v >= 0 ? '+' : ''}${Math.round(v)} dB`, v => { inst._volumenDb = v; touchInst(); });
+    const volRow = makeRange('VOL', -40, 12, 1, inst._volumenDb ?? -18, v => `${Math.round(v)} dB`, v => { inst._volumenDb = v; touchInst(); });
 
     row.appendChild(lbl);
     row.appendChild(status);

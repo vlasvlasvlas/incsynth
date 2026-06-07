@@ -65,7 +65,7 @@ export const PRESETS = {
       modulation:      { type: 'sine' },
       modulationEnvelope: { attack: 0.001, decay: 0.5, sustain: 0, release: 1 },
     },
-    volume: -15,
+    volume: -3,
   },
 
   PIZZ: {
@@ -146,7 +146,7 @@ export const PRESETS = {
       oscillator: { type: 'triangle' },
       envelope:   { attack: 0.008, decay: 0.6, sustain: 0.35, release: 3.0 },
     },
-    volume: -10,
+    volume: -20,
   },
 
   MORODER: {
@@ -235,7 +235,7 @@ export const PRESETS = {
 
 export const DEFAULTS = {
   cuerdas:   'VOCODER',
-  percusion: 'SPACE_LADY',
+  percusion: 'CAMPANA',
   melodia:   'VANGELIS',
   mallets:   'GAMELAN',
 };
