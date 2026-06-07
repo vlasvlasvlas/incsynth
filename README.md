@@ -46,9 +46,9 @@ impulsos, el tiempo de repetición y la escucha entre músicos.
 
 La formación actual contiene tres voces independientes:
 
-- **Cuerdas:** ataque suave y material sostenido.
-- **Percusión:** comportamiento seco e impulsivo.
-- **Melodía:** figuras agudas y puntuales.
+- **Cuerdas (Vocoder / Coral):** texturaominosa y profunda, voces procesadas de material sostenido que asientan la obra.
+- **Percusión (Vibráfono / Campana):** ataque inmediato y decaimiento lento, funciona como reloj y motor secuencial.
+- **Melodía (Rhodes onírico):** figuras agudas y armónicos metálicos suaves, con largo sustain y protagonismo melódico.
 
 Cada músico posee:
 
@@ -145,13 +145,15 @@ escucha. Ese puntaje reúne varias contribuciones:
 
 ### 1. Dato externo
 
-Cada fuente se transforma en verbos musicales:
+Cada fuente de datos (clima, cripto, noticias) no toca una "nota" directamente, sino que se normaliza y se traduce a "verbos" que alteran el comportamiento del instrumento en tiempo real:
 
-- **ENTRA:** habilita actividad.
-- **AVANZA:** aporta presión de desplazamiento.
-- **RETIENE:** favorece permanecer.
-- **MUTA:** modifica el timbre.
-- **SALE:** puede retirar temporalmente una voz.
+- **ENTRA:** Autoriza la actividad del músico. Si la señal de entrada cae demasiado, el instrumento entra en estado "Descansando" y su volumen cae drásticamente.
+- **AVANZA:** Acumula la presión que le indica al músico que debe pasar al siguiente patrón de la partitura. Al ocurrir un avance, la posición cambia y se emite un "impacto" o *shockwave* que otros músicos pueden sentir.
+- **RETIENE:** Controla los "silencios voluntarios". Si esta señal es alta, el músico aumenta la probabilidad matemática de omitir (no tocar) determinadas notas dentro de su patrón repitente. Esto otorga al instrumento una respiración natural en lugar de sonar como un loop rígido de computadora.
+- **MUTA:** Interviene directamente en el sintetizador. Abre la frecuencia de corte (cutoff) del filtro paso bajo: valores altos de Muta hacen que el sonido del instrumento se vuelva drásticamente más brillante, afilado y agresivo, destacándolo armónicamente en la mezcla.
+- **SALE:** Reduce la presencia de la voz, llevándola al silencio o retirándola temporalmente del ensamble.
+
+Además, los parámetros macros como la **Lente País** afectan la "Audibilidad" de todo el canal, hundiendo o elevando el volumen base del instrumento según si el país elegido tiene un indicador extremo, promedio o central. Finalmente, el nivel general de **Volatilidad** en el mundo externo degrada directamente el volumen del "Reloj Maestro" (el pulso metronómico), enmascarándolo cuando el mundo exterior está agitado.
 
 ### 2. Huella
 
@@ -279,7 +281,9 @@ presiones musicales que cada músico interpreta desde su propia situación.
 ### Lente país
 
 La lente país modifica la audibilidad de los músicos a partir de un indicador
-seleccionado. Entre otros, están disponibles:
+estructural de una nación (ej. PBI, Gini, Desempleo). Este filtro macroeconómico
+rota automáticamente cada 60 segundos eligiendo un país y un indicador al azar,
+y clasifica el resultado en tres estados:
 
 - desigualdad;
 - pobreza extrema;
