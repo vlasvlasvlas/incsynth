@@ -90,6 +90,9 @@ export class AudioEngine {
     this.filtros[id] = filtro;
     this._presetKeys = this._presetKeys || {};
     this._presetKeys[id] = presetKey;
+    // El synth nuevo ya tiene el tipo correcto; registrar para evitar set redundante.
+    this._lastOscType = this._lastOscType || {};
+    this._lastOscType[id] = preset.config?.oscillator?.type ?? null;
   }
 
   cambiarPreset(id, presetKey) {
@@ -168,10 +171,20 @@ export class AudioEngine {
 
       // Cuarto Músico: VAE de timbre modula parámetros de síntesis
       const vaeParams = cuartoMusico.getTimbreIA(inst, this.sala);
+      // Tipo de oscilador deseado: VAE cuando influencia > 50%, preset en otro caso.
+      // Se setea SOLO cuando cambia para evitar que Tone.js recree el nodo en cada pulse
+      // (bug: 'triangle8' ≠ 'fat8triangle' internamente → clack cada 8va nota).
+      let desiredOscType = presetParams.oscillatorType ?? null;
       if (vaeParams) {
         cuartoMusico.aplicarTimbre(this.synths[id], this.filtros[id], vaeParams, presetParams);
+        if (vaeParams._influence > 0.5 && vaeParams._oscName) desiredOscType = vaeParams._oscName;
       } else {
         cuartoMusico.restaurarTimbre(this.synths[id], this.filtros[id], presetParams);
+      }
+      if (!this._lastOscType) this._lastOscType = {};
+      if (desiredOscType && desiredOscType !== this._lastOscType[id]) {
+        try { this.synths[id].set({ oscillator: { type: desiredOscType } }); } catch (_) {}
+        this._lastOscType[id] = desiredOscType;
       }
 
       // Volumen base + ajuste por estado y audibilidad

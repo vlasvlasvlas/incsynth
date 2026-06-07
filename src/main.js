@@ -1051,8 +1051,8 @@ function buildRitmoCard(getEngine) {
   const pulsoLbl = document.createElement('span'); pulsoLbl.className = 'lente-label'; pulsoLbl.textContent = 'PULSO';
   const pulsoControl = document.createElement('div'); pulsoControl.className = 'ritmo-pulso-input';
   const pulsoSlider = document.createElement('input');
-  pulsoSlider.type = 'range'; pulsoSlider.min = -40; pulsoSlider.max = 0; pulsoSlider.step = 1; pulsoSlider.value = -23;
-  pulsoSlider.setAttribute('aria-label', 'Volumen del golpe agudo');
+  pulsoSlider.type = 'range'; pulsoSlider.min = -60; pulsoSlider.max = 0; pulsoSlider.step = 1; pulsoSlider.value = -23;
+  pulsoSlider.setAttribute('aria-label', 'Volumen del golpe agudo (-60 = silencio)');
   pulsoSlider.title = '-23 dB';
   let kickEnabled = false;
   const kickBtn = document.createElement('button');
@@ -1063,9 +1063,9 @@ function buildRitmoCard(getEngine) {
   kickBtn.setAttribute('aria-pressed', 'false');
   pulsoSlider.addEventListener('input', () => {
     const v = parseInt(pulsoSlider.value);
-    pulsoSlider.title = `${v} dB`;
+    pulsoSlider.title = v <= -58 ? 'MUTE' : `${v} dB`;
     const eng = getEngine();
-    if (eng?._pulse) eng._pulse.setVolume(v);
+    if (eng?._pulse) eng._pulse.setVolume(v <= -58 ? -Infinity : v);
   });
   kickBtn.addEventListener('click', () => {
     kickEnabled = !kickEnabled;

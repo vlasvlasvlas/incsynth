@@ -7,6 +7,7 @@
 
 ## Índice
 
+- [2026-06-07 — Fix: glitch de audio al apagar IA + mute pulso](#2026-06-07--fix-glitch-de-audio-al-apagar-ia--mute-pulso)
 - [2026-06-07 — Panel de Expertos: Ronda 1](#2026-06-07--panel-de-expertos-ronda-1)
 - [2026-06-07 — Panel de Expertos: Ronda 2 — Viabilidad en Browser](#2026-06-07--panel-de-expertos-ronda-2--viabilidad-en-browser)
 - [2026-06-07 — Decisión: Arrancar Fase 1 — VAE de Timbre](#2026-06-07--decisión-arrancar-fase-1--vae-de-timbre)
@@ -18,6 +19,37 @@
 - [2026-06-07 — Cleanup: renombrar YAMNet → Escucha Ambiente FFT en UI y docs](#2026-06-07--cleanup-renombrar-yamnet--escucha-ambiente-fft-en-ui-y-docs)
 - [2026-06-07 — Fix: MAX_MEM 2000 → 8000 (sesión perdía datos desde min 16)](#2026-06-07--fix-max_mem-2000--8000-sesión-perdía-datos-desde-min-16)
 - [2026-06-07 — GNN calibrado + Fase 5 RAVE + Fase 6 MARL reward](#2026-06-07--gnn-calibrado--fase-5-rave--fase-6-marl-reward)
+
+---
+
+## 2026-06-07 — Fix: glitch de audio al apagar IA + mute pulso
+
+### Síntoma
+
+Al apagar el Cuarto Músico (alpha → 0), el audio sonaba con glitch / fritura digital continua. Adicionalmente, el slider PULSO no silenciaba completamente el pulso incluso en su mínimo (-40 dB), y al bajar el bombo (kick) este no se controlaba.
+
+### Diagnóstico
+
+**Bug 1 — Clack/clack en cada 8va nota al apagar la IA** (bug principal):
+
+Introducido hoy en la integración del Cuarto Músico. `Engine._actualizarSintesis()` llama `aplicarTimbre()` o `restaurarTimbre()` en cada pulse (cada corchea). Ambas funciones llamaban `synth.set({ oscillator: { type: presetParams.oscillatorType } })`. El preset VOCODER (instrumento `cuerdas`) tiene `oscillator.type = 'triangle8'`. 
+
+Internamente, Tone.js convierte `'triangle8'` a un `FatOscillator` cuyo getter devuelve `'fat8triangle'`. En cada pulse, Tone.js compara `'triangle8'` (string que mandamos) con `'fat8triangle'` (string interno) → ve un "cambio" → **destruye y recrea el nodo oscilador → clack audible**. Con la IA encendida no se notaba porque el VAE usaba tipos simples (`'sine'`) que Tone.js sí deduplica correctamente.
+
+**Bug 2 — LSTM corriendo cuando la IA está apagada**: `registrarCiclo()` llamaba `lstm.registrarCiclo()` incondicionalmente. `predecirSecuencia()` usa `dataSync()` (bloqueo sincrónico de GPU/TF.js) dentro del scheduler de Tone.js, lo que podía causar underruns adicionales.
+
+**Bug 3 — Pulso no silenciable**: Slider PULSO llegaba solo a -40 dB (audible). `Pulse.setVolume()` no controlaba el `_kick`.
+
+### Fixes aplicados
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/audio/Engine.js` | Tracking `_lastOscType[id]`: solo llama `synth.set({ oscillator })` cuando el tipo REALMENTE cambia. Inicializado en `_buildSynth` con el tipo del preset. |
+| `src/ai/cuartoMusico.js` | `aplicarTimbre()` y `restaurarTimbre()` ya no tocan `oscillator.type` (delegado a Engine). Guard `_alpha > 0.3 && lstm.isReady()` en `registrarCiclo()`. |
+| `src/audio/Pulse.js` | `setVolume(db)` ahora también controla `_kick.volume` con offset +9 dB. |
+| `src/main.js` | Slider PULSO: `min = -40 → -60`. A ≤ -58 dB, muestra "MUTE" y envía `-Infinity`. |
+
+Build: `npm run build` → ✅ 1.83s limpio.
 
 ---
 

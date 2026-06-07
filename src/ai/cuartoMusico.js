@@ -92,19 +92,14 @@ export function aplicarTimbre(synth, filtro, vaeParams, presetParams) {
       modulationIndex: lerp(presetParams.modIndex    ?? 5, vaeParams.modIndex),
     });
   } catch (_) {}
-  try {
-    if (t > 0.5 && vaeParams._oscName) {
-      synth.set({ oscillator: { type: vaeParams._oscName } });
-    } else if (presetParams.oscillatorType) {
-      synth.set({ oscillator: { type: presetParams.oscillatorType } });
-    }
-  } catch (_) {}
+  // El tipo de oscilador se maneja en Engine._actualizarSintesis con tracking
+  // para evitar recrear el nodo en cada pulse (clack con tipos como 'triangle8').
 }
 
 export function restaurarTimbre(synth, filtro, presetParams) {
   if (!synth || !presetParams) return;
   try { synth.set({ envelope: { attack: presetParams.attack ?? 0.1, decay: presetParams.decay ?? 0.5, sustain: presetParams.sustain ?? 0.5, release: presetParams.release ?? 1.0 } }); } catch (_) {}
-  try { if (presetParams.oscillatorType) synth.set({ oscillator: { type: presetParams.oscillatorType } }); } catch (_) {}
+  // oscillatorType: gestionado en Engine._actualizarSintesis (solo cambia cuando difiere).
   try { synth.set({ harmonicity: presetParams.harmonicity ?? 1, modulationIndex: presetParams.modIndex ?? 5 }); } catch (_) {}
   try { filtro?.frequency?.rampTo?.(presetParams.filterCut ?? 4000, 0.4); } catch (_) {}
 }
@@ -112,7 +107,11 @@ export function restaurarTimbre(synth, filtro, presetParams) {
 // ── LSTM Estilo ───────────────────────────────────────────────────────────────
 
 export function registrarCiclo(id, instrumento, sala, avanzo) {
-  lstm.registrarCiclo(id, instrumento, sala || _sala, avanzo);
+  // Solo corre LSTM cuando está activo: predecirSecuencia usa dataSync() (bloquea
+  // el hilo principal) y en el scheduler de Tone.js causa glitch de audio si alpha=0.
+  if (_alpha > 0.3 && lstm.isReady()) {
+    lstm.registrarCiclo(id, instrumento, sala || _sala, avanzo);
+  }
 
   // Logger: capturar estado completo
   if (logger.isActivo()) {

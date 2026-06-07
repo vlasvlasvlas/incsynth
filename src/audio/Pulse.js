@@ -39,6 +39,9 @@ export class Pulse {
 
   setVolume(db) {
     this._synth.volume.rampTo(db, 0.3);
+    // El kick mantiene 9 dB de ventaja sobre el synth (balance original).
+    // A -60 o menos ambos son inaudibles.
+    this._kick.volume.rampTo(Math.min(0, db + 9), 0.3);
   }
 
   setWaveform(type) {
