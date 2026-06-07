@@ -101,13 +101,19 @@ export function aplicarTimbre(synth, filtro, vaeParams, presetParams) {
 
   // Modulación FM (si el synth lo soporta)
   try {
-    if (synth.harmonicity) {
-      const presetHarm = presetParams.harmonicity ?? 1;
-      synth.harmonicity.rampTo(lerp(presetHarm, vaeParams.harmonicity), 0.5);
-    }
-    if (synth.modulationIndex) {
-      const presetMod = presetParams.modIndex ?? 5;
-      synth.modulationIndex.rampTo(lerp(presetMod, vaeParams.modIndex), 0.5);
+    const presetHarm = presetParams.harmonicity ?? 1;
+    const presetMod = presetParams.modIndex ?? 5;
+    
+    synth.set({
+      harmonicity: lerp(presetHarm, vaeParams.harmonicity),
+      modulationIndex: lerp(presetMod, vaeParams.modIndex)
+    });
+  } catch (_) {}
+
+  // Tipo de oscilador (cambia discretamente si la influencia es mayor a 50%)
+  try {
+    if (t > 0.5 && vaeParams._oscName) {
+      synth.set({ oscillator: { type: vaeParams._oscName } });
     }
   } catch (_) {}
 }
