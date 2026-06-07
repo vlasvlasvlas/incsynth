@@ -626,6 +626,71 @@ Dos ajustes en `src/ai/lstmEstilo.js` basados en observaciones:
 2. **MARL training**: implementar loop de entrenamiento con PettingZoo + PPO usando `rewardFunction.js` como señal.
 3. **Calibración LSTM/GNN**: escuchar 3+ sesiones largas y ajustar `±0.12` (LSTM) y `W_OUT` (GNN) contra los logs.
 
+## 2026-06-07 — Sesión RAVE: corpus generado (19:41)
+
+### Datos de la sesión
+
+- Duración: 1505 segundos (~25 minutos)
+- Archivo audio: `incsynth_audio_2026-06-07_19-41.ogg` (23.3 MB, formato OGG — browser en macOS)
+- Archivo sync: `incsynth_sync_2026-06-07_19-41.json` (182 KB)
+- Marcadores: 503 (uno descartado por < 0.5s)
+- Chunks generados: 502 WAV @ 44100 Hz mono
+
+### Estadísticas de z-vectors VAE
+
+| Instrumento | z[0] pos (mean/std) | z[1] aud | z[2] muta | z[3] vol |
+|-------------|---------------------|----------|-----------|----------|
+| cuerdas | -0.57 / 0.80 | 1.06 / 1.0 | -1.23 / **0.01** | -1.23 / **0.01** |
+| melodia | -0.80 / 0.87 | 1.06 / 1.0 | 1.20 / **0.00** | 2.00 / **0.01** |
+| percusion | -0.55 / 0.82 | 1.06 / 1.0 | -1.22 / **0.04** | -1.35 / **0.04** |
+
+- z[0] y z[1] con buena varianza: músicos recorrieron la partitura con audibilidad variable.
+- z[2] (muta) y z[3] (volatilidad) casi sin varianza: el verbo MUTA raramente se activó y la volatilidad global fue estable. Para sesiones futuras: buscar fuentes con mayor volatilidad.
+
+### Corpus ubicado en
+
+`lab/corpus/chunks/` (502 archivos) + `lab/corpus/manifest.json`
+
+### Preprocesado y entrenamiento — troubleshooting completo
+
+#### Problema 1: `scipy.signal.kaiser` eliminado en scipy ≥ 1.13
+`rave/pqmf.py` importaba `kaiser` y `kaiser_beta` de `scipy.signal`. Fueron eliminados en scipy 1.13 (movidos a `numpy`). No se pudo hacer downgrade de scipy porque Python 3.14 no compila scipy < 1.13.
+
+**Fix aplicado en `.venv/lib/python3.14/site-packages/rave/pqmf.py`:**
+```python
+# antes:
+from scipy.signal import firwin, kaiser, kaiser_beta, kaiserord
+# después:
+from scipy.signal import firwin, kaiserord
+from numpy import kaiser
+kaiser_beta = lambda atten: kaiserord(atten, 1.0 / np.pi)[1]
+```
+
+#### Problema 2: `kaiserord` recibe array numpy en vez de scalar (numpy 2.x)
+`fmin` de scipy pasa arrays 1-D a la función objetivo. `kaiserord` y `firwin` esperan scalars. En numpy 2.x la conversión implícita fue eliminada.
+
+**Fix en `kaiser_filter`:**
+```python
+N_, beta = kaiserord(float(atten), float(np.asarray(wc).flat[0]) / np.pi)
+h = firwin(N, float(np.asarray(wc).flat[0]), window=('kaiser', beta), scale=False, fs=2*np.pi)
+```
+(`nyq=` también fue eliminado de `firwin` en scipy nuevo — reemplazado por `fs=2*np.pi`)
+
+#### Problema 3: `rave train` pedía `metadata.yaml` — faltaba paso de preprocesado
+RAVE requiere correr `rave preprocess` antes de `rave train`. Los WAV del corpus no son suficientes.
+
+#### Problema 4: `rave preprocess` falló con `ffmpeg` roto — `libx265.215.dylib` no encontrada
+`ffmpeg 8.0.1` de homebrew tenía dependencia rota con x265. Fix: `brew reinstall x265`.
+
+#### Resultado final
+```bash
+rave preprocess --input_path corpus/chunks/ --output_path corpus/preprocessed/
+# dataset length: 0:24:46 — 501 chunks procesados en 5s ✅
+
+rave train --config v2 --db_path corpus/preprocessed/ --name incsynth_rave
+# corriendo — tiempo estimado: 2-4 horas en M4 Pro
+```
+
 <!-- 
 PLANTILLA PARA NUEVAS ENTRADAS:
 

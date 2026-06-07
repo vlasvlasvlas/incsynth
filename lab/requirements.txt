@@ -1,4 +1,9 @@
 torch>=2.0
+torchaudio
 numpy
 librosa
 soundfile
+acids-rave
+# scipy debe quedar < 1.13 — acids-rave usa scipy.signal.kaiser que fue eliminado en 1.13+
+# En Python 3.14 no compila scipy<1.13, así que se parchea rave/pqmf.py manualmente
+# (ver lab/BITACORA.md para el fix aplicado)
