@@ -564,3 +564,6 @@ repetición, memoria, atención y convivencia. El sistema no pregunta solamente
 
 > ¿Qué hace un músico con ese impulso después de escuchar dónde está, cuánto
 > tiempo lleva allí y qué están haciendo los otros?
+## License
+
+MIT License — © 2026 [Vladimiro Bellini](https://github.com/vlasvlasvlas). Free to use and modify, attribution required.
