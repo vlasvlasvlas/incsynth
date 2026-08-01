@@ -234,8 +234,8 @@ export const PRESETS = {
 };
 
 export const DEFAULTS = {
-  cuerdas:   'VOCODER',
-  percusion: 'CAMPANA',
-  melodia:   'VANGELIS',
+  cuerdas:   'FLAUTA',
+  percusion: 'VANGELIS',
+  melodia:   'MORODER',
   mallets:   'GAMELAN',
 };

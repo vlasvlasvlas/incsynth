@@ -624,6 +624,51 @@ select.lente-sel:focus { outline: 1px solid var(--fg); }
   justify-self: end;
 }
 
+.synth-edit-toggle {
+  width: 100%;
+  text-align: left;
+  margin-top: 0.35rem;
+  justify-self: unset;
+  font-size: 0.52rem;
+  letter-spacing: 0.05em;
+}
+.synth-edit-panel {
+  margin-top: 0.3rem;
+  padding: 0.5rem 0.55rem;
+  border: 1px solid var(--soft);
+  background: var(--field);
+  border-radius: 2px;
+}
+.synth-edit-row {
+  display: grid;
+  grid-template-columns: 62px 1fr;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.28rem;
+  font-family: var(--mono);
+  font-size: 0.52rem;
+  text-transform: uppercase;
+  color: #444;
+}
+.synth-edit-row select.lente-sel {
+  font-size: 0.52rem;
+}
+.synth-reset-btn {
+  width: 100%;
+  margin-top: 0.4rem;
+  justify-self: unset;
+  font-size: 0.5rem;
+  opacity: 0.7;
+}
+.synth-reset-btn:hover { opacity: 1; }
+
+body.dark-theme .synth-edit-panel {
+  border-color: #333;
+}
+body.dark-theme .synth-edit-row {
+  color: #aaa;
+}
+
 .intervencion-card {
   border-color: var(--fg);
   background: var(--field);

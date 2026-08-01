@@ -819,3 +819,70 @@ Qué elegimos y por qué.
 ### Próximo paso
 Qué sigue.
 -->
+
+## 2026-07-31 — Módulo de síntesis clásica por canal
+
+**Qué se hizo:**
+- Agregado panel expandible `+ SÍNTESIS` en cada uno de los 3 canales (cuerdas, percusión, melodía) dentro del panel MÚSICOS CONVOCADOS
+- Panel expone en tiempo real: tipo de synth (Synth/FMSynth/AMSynth/PolySynth/MembraneSynth), tipo de onda, ADSR completo, frecuencia de filtro, harmonicity y modulationIndex (condicional para FM/AM)
+- Parámetros FM/AM (HARM, MOD IDX) se muestran/ocultan según el tipo seleccionado; ONDA se oculta para MembraneSynth
+- Botón RESETEAR AL PRESET restaura todos los valores al preset elegido en el dropdown
+- Al cambiar el preset en el dropdown, el panel de síntesis sincroniza sus valores automáticamente
+- Engine.js recibe 3 métodos nuevos: `patchSynth(id, changes)` (parámetros sin reconstruir), `patchFilter(id, freq)`, `patchSynthType(id, tipo, params)` (reconstruye el synth)
+- Soporte para custom presets en `_actualizarSintesis` (VAE timbre modulation respeta la síntesis editada)
+
+**Archivos modificados:** `src/audio/Engine.js`, `src/main.js`, `src/styles.css`
+
+## 2026-07-31 — Auto-selección inicial de fuentes de datos
+
+- **Noticias (RSS)**: la card ahora llama `apply()` al montar con `setTimeout(..., 0)`, sincronizando los dropdowns con la selección activa del adapter (global/all por defecto) e iniciando el fetch de inmediato
+- **Lente País**: selecciona automáticamente el primer país (Argentina) y el primer indicador (GINI) al arrancar, llama `update()` para activar el lente desde el inicio — sin esperar el auto-rotate de 60s
+- **Mercado**: ya tenía BTC/ETH seleccionado por defecto, sin cambios
+
+**Archivos modificados:** `src/ui/controls.js`
+
+## 2026-07-31 — Fix: parámetros del panel de síntesis no se aplicaban
+
+**Bug:** `_actualizarSintesis()` corría en cada pulso de 8va nota y llamaba `restaurarTimbre()`, que sobreescribía ADSR/harmonicity/modIndex con los valores del preset original — borrando todo lo que el usuario cambiaba en el panel `+ SÍNTESIS`.
+
+**Fix:**
+- `patchSynth(id, changes)` ahora persiste los cambios en `_customPresets[id].config` vía `_mergeConfig()` (deep merge). Si no hay custom preset todavía, crea un snapshot del preset actual con `_snapshotPreset()`.
+- `patchFilter(id, freq)` guarda `_filterBase` en el custom preset. `_actualizarSintesis` usa ese piso para el cálculo de MUTA: `filterBase + muta * (14400 - filterBase)`, así MUTA abre el filtro sobre el valor manual elegido en lugar de partir siempre de 900Hz.
+- Agregada helper `_mergeConfig(target, changes)` para deep merge de configuración.
+
+**Archivos modificados:** `src/audio/Engine.js`
+
+## 2026-07-31 — Fix panel síntesis + redefinir controles por canal
+
+### Bug crítico corregido
+`patch()` en `buildSynthEditPanel` tenía guard `eng?._running` — si el motor no había
+arrancado, los cambios de ADSR/TIPO/ONDA/FILTRO no se guardaban ni aplicaban. También
+afectaba `patchSynthType`, `patchFilter` y `cambiarPreset`. Cambiado a `if (eng)` en todos.
+
+### Controles redefinidos
+| Antes | Ahora | Propiedad | Función real |
+|-------|-------|-----------|-------------|
+| PERMISO | PASO | `_advanceBias` | Sesgo de avance al siguiente patrón (-35% a +45%) |
+| TIMBRE | APERTURA | `_manualMuta` | Piso del filtro (0 = cerrado, 1 = abierto al máximo) |
+| AURA | GLIDE | `_glideTime` | Portamento — tiempo de desliz entre notas (0–0.4s) |
+| BRILLO | BRILLO | `_brilloGain` | High-shelf gain — calidez/brillo del sonido (−12 a +12 dB) |
+
+### Engine.js
+- Añadido `Tone.Filter(highshelf, 3000Hz)` por canal → `brightFilters[id]`
+- `_actualizarSintesis`: aplica `inst._brilloGain` al highshelf y `inst._glideTime` como portamento
+- `_glowRadius` y `_lightGain` resetados a 1 (valor neutro para CircleView/PartituraView)
+
+---
+
+## 2026-08-01 — UX: PRESIÓN se atenúa cuando GESTO está en 0
+
+### Problema
+PRESIÓN sin GESTO no tiene efecto en el audio (el blend está en 0), pero el slider
+aparecía igual de activo visualmente, confundiendo qué controla qué.
+
+### Cambio
+En `main.js`, después de crear ambos sliders, se agrega `syncPresion()`:
+- Si `GESTO ≤ 0.02` → `signalRow.el` opacity 0.35 + tooltip "Sube GESTO para activar PRESIÓN"
+- Si `GESTO > 0.02` → opacity normal, sin tooltip
+
+Se dispara en cada `input` de GESTO y una vez al init para reflejar el valor inicial.

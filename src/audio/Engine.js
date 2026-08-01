@@ -30,7 +30,35 @@ export class AudioEngine {
     }
   }
 
-  _buildSynth(id, presetKey) {
+  patchSynth(id, changes) {
+    try { this.synths[id]?.set(changes); } catch (_) {}
+    this._customPresets = this._customPresets || {};
+    if (!this._customPresets[id]) this._customPresets[id] = this._snapshotPreset(id);
+    _mergeConfig(this._customPresets[id].config, changes);
+  }
+
+  patchFilter(id, freq) {
+    this._customPresets = this._customPresets || {};
+    if (!this._customPresets[id]) this._customPresets[id] = this._snapshotPreset(id);
+    this._customPresets[id]._filterBase = freq;
+    try { if (this.filtros[id]) this.filtros[id].frequency.value = freq; } catch (_) {}
+  }
+
+  patchSynthType(id, tipo, params) {
+    const vol = this.instrumentos[id]?._volumenDb ?? -18;
+    this._buildSynth(id, { tipo, config: params, volume: vol });
+  }
+
+  _snapshotPreset(id) {
+    const preset = PRESETS[this._presetKeys?.[id]] || PRESETS.VANGELIS;
+    return {
+      tipo:   preset.tipo || 'Synth',
+      config: JSON.parse(JSON.stringify(preset.config || {})),
+      volume: this.instrumentos[id]?._volumenDb ?? preset.volume ?? -18,
+    };
+  }
+
+  _buildSynth(id, presetKeyOrObj) {
     // Liberar toda la cadena anterior antes de reconstruir el timbre.
     if (this.synths[id]) { try { this.synths[id].dispose(); } catch (_) {} }
     if (this.localEffects?.[id]) {
@@ -39,7 +67,12 @@ export class AudioEngine {
       });
     }
 
-    const preset = PRESETS[presetKey] || PRESETS.VANGELIS;
+    const isCustom = typeof presetKeyOrObj === 'object' && presetKeyOrObj !== null;
+    const preset = isCustom ? presetKeyOrObj : (PRESETS[presetKeyOrObj] || PRESETS.VANGELIS);
+    if (isCustom) {
+      this._customPresets = this._customPresets || {};
+      this._customPresets[id] = preset;
+    }
     
     // Cadena de efectos local
     const chain = [];
@@ -56,6 +89,12 @@ export class AudioEngine {
       chain.push(new Tone.AutoFilter("4n").start());
     }
     
+    // Highshelf para BRILLO (brightness del canal)
+    const brightFilter = new Tone.Filter({ type: 'highshelf', frequency: 3000, gain: 0 });
+    chain.push(brightFilter);
+    this.brightFilters = this.brightFilters || {};
+    this.brightFilters[id] = brightFilter;
+
     // Conectar cadena al reverb global
     let lastNode = filtro;
     for (let i = 1; i < chain.length; i++) {
@@ -89,7 +128,7 @@ export class AudioEngine {
     this.synths[id]  = synth;
     this.filtros[id] = filtro;
     this._presetKeys = this._presetKeys || {};
-    this._presetKeys[id] = presetKey;
+    if (!isCustom) this._presetKeys[id] = presetKeyOrObj;
     // El synth nuevo ya tiene el tipo correcto; registrar para evitar set redundante.
     this._lastOscType = this._lastOscType || {};
     this._lastOscType[id] = preset.config?.oscillator?.type ?? null;
@@ -98,6 +137,7 @@ export class AudioEngine {
   cambiarPreset(id, presetKey) {
     if (!PRESETS[presetKey]) return;
     if (this.instrumentos[id]) this.instrumentos[id]._presetKey = presetKey;
+    if (this._customPresets) delete this._customPresets[id];
     this._buildSynth(id, presetKey);
   }
 
@@ -153,11 +193,13 @@ export class AudioEngine {
       const ui   = inst.getEstadoUI();
       if (!this.synths[id]) continue;
 
-      // MUTA → filtro cutoff
-      const cutoff = 900 + Math.max(ui.muta, inst._manualMuta ?? 0) * 13500;
+      // MUTA → filtro cutoff (el panel de síntesis puede fijar un piso manual)
+      const filterBase = this._customPresets?.[id]?._filterBase ?? 900;
+      const mutaAmt   = Math.max(ui.muta, inst._manualMuta ?? 0);
+      const cutoff    = filterBase + mutaAmt * Math.max(0, 14400 - filterBase);
       this.filtros[id].frequency.rampTo(cutoff, 0.3);
 
-      const presetConf = PRESETS[this._presetKeys?.[id]]?.config || {};
+      const presetConf = (this._customPresets?.[id] || PRESETS[this._presetKeys?.[id]])?.config || {};
       const presetParams = {
         attack:         presetConf.envelope?.attack ?? 0.1,
         decay:          presetConf.envelope?.decay ?? 0.5,
@@ -187,8 +229,16 @@ export class AudioEngine {
         this._lastOscType[id] = desiredOscType;
       }
 
+      // GLIDE (portamento entre notas)
+      try { this.synths[id].set({ portamento: inst._glideTime ?? 0 }); } catch (_) {}
+
+      // BRILLO (highshelf gain para calidez/brillo del canal)
+      if (this.brightFilters?.[id]) {
+        try { this.brightFilters[id].set({ gain: inst._brilloGain ?? 0 }); } catch (_) {}
+      }
+
       // Volumen base + ajuste por estado y audibilidad
-      const preset   = PRESETS[this._presetKeys?.[id]] || {};
+      const preset   = this._customPresets?.[id] || PRESETS[this._presetKeys?.[id]] || {};
       let   volBase  = inst._volumenDb ?? (preset.volume ?? -18);
       if (ui.audibilidad < 0.3)  volBase -= 14;
       else if (ui.audibilidad < 0.7) volBase -= 5;
@@ -310,6 +360,18 @@ export class AudioEngine {
           try { fx.dispose(); } catch(e){}
         });
       }
+    }
+  }
+}
+
+function _mergeConfig(target, changes) {
+  for (const key of Object.keys(changes)) {
+    const val = changes[key];
+    if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
+      target[key] = target[key] || {};
+      _mergeConfig(target[key], val);
+    } else {
+      target[key] = val;
     }
   }
 }

@@ -104,8 +104,10 @@ async function init() {
     inst._manualBlend = 0;
     inst._advanceBias = 0;
     inst._manualMuta = 0;
-    inst._glowRadius = 3;
-    inst._lightGain = 2.5;
+    inst._glowRadius = 1;
+    inst._lightGain = 1;
+    inst._glideTime = 0;
+    inst._brilloGain = 0;
     instrumentos[id] = inst;
     sala.registrarInstrumento(id, 0);
     inst.conectarFuentes([{ id: `${fid}_A`, tipo: fid, source: fuentes[fid], mapeo }]);
@@ -810,6 +812,122 @@ function escapeHTML(value) {
     .replace(/'/g, '&#039;');
 }
 
+// ── Panel de síntesis clásica por canal ──
+function buildSynthEditPanel(id, inst, getEngine) {
+  const TIPOS = ['Synth', 'FMSynth', 'AMSynth', 'PolySynth', 'MembraneSynth'];
+  const ONDAS = ['sine', 'triangle', 'sawtooth', 'square', 'triangle8', 'sawtooth4', 'fat4'];
+
+  const panel = document.createElement('div');
+  panel.className = 'synth-edit-panel';
+
+  let tipo = 'Synth';
+  let params = {};
+  let filterFreq = 8000;
+
+  function patch(changes) {
+    const eng = getEngine();
+    if (eng) eng.patchSynth(id, changes);
+  }
+
+  // Tipo de synth
+  const tipoRow = document.createElement('div');
+  tipoRow.className = 'synth-edit-row';
+  const tipoLbl = document.createElement('span'); tipoLbl.textContent = 'TIPO';
+  const tipoSel = document.createElement('select'); tipoSel.className = 'lente-sel';
+  TIPOS.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; tipoSel.appendChild(o); });
+  tipoSel.addEventListener('change', () => {
+    tipo = tipoSel.value;
+    updateConditional();
+    const eng = getEngine();
+    if (eng) eng.patchSynthType(id, tipo, buildConfig());
+  });
+  tipoRow.appendChild(tipoLbl); tipoRow.appendChild(tipoSel);
+  panel.appendChild(tipoRow);
+
+  // Tipo de onda
+  const ondaRow = document.createElement('div');
+  ondaRow.className = 'synth-edit-row';
+  const ondaLbl = document.createElement('span'); ondaLbl.textContent = 'ONDA';
+  const ondaSel = document.createElement('select'); ondaSel.className = 'lente-sel';
+  ONDAS.forEach(w => { const o = document.createElement('option'); o.value = w; o.textContent = w; ondaSel.appendChild(o); });
+  ondaSel.addEventListener('change', () => {
+    params.oscillator = { ...params.oscillator, type: ondaSel.value };
+    patch({ oscillator: { type: ondaSel.value } });
+  });
+  ondaRow.appendChild(ondaLbl); ondaRow.appendChild(ondaSel);
+  panel.appendChild(ondaRow);
+
+  // ADSR + Filtro
+  const atkR = makePanelRange('ATAQUE',  0.001, 5,     0.001, 0.1,  v => `${v.toFixed(2)}s`, v => { if (!params.envelope) params.envelope = {}; params.envelope.attack  = v; patch({ envelope: { attack:  v } }); });
+  const decR = makePanelRange('DECAY',   0.001, 5,     0.001, 0.5,  v => `${v.toFixed(2)}s`, v => { if (!params.envelope) params.envelope = {}; params.envelope.decay   = v; patch({ envelope: { decay:   v } }); });
+  const susR = makePanelRange('SUSTAIN', 0,     1,     0.01,  0.5,  v => v.toFixed(2),        v => { if (!params.envelope) params.envelope = {}; params.envelope.sustain = v; patch({ envelope: { sustain: v } }); });
+  const relR = makePanelRange('RELEASE', 0.05,  12,    0.01,  1.0,  v => `${v.toFixed(2)}s`, v => { if (!params.envelope) params.envelope = {}; params.envelope.release = v; patch({ envelope: { release: v } }); });
+  const filR = makePanelRange('FILTRO',  120,   18000, 10,    8000, v => `${Math.round(v)}Hz`, v => { filterFreq = v; const eng = getEngine(); if (eng) eng.patchFilter(id, v); });
+  const harR = makePanelRange('HARM',    0.1,   20,    0.1,   2,    v => v.toFixed(1),        v => { params.harmonicity = v; patch({ harmonicity: v }); });
+  const modR = makePanelRange('MOD IDX', 0,     40,    0.1,   5,    v => v.toFixed(1),        v => { params.modulationIndex = v; patch({ modulationIndex: v }); });
+
+  for (const r of [atkR, decR, susR, relR, filR, harR, modR]) panel.appendChild(r.el);
+
+  function updateConditional() {
+    const isFM = tipo === 'FMSynth';
+    const isAM = tipo === 'AMSynth';
+    const isMem = tipo === 'MembraneSynth';
+    harR.el.style.display = (isFM || isAM) ? '' : 'none';
+    modR.el.style.display = isFM ? '' : 'none';
+    ondaRow.style.display = isMem ? 'none' : '';
+  }
+
+  function buildConfig() {
+    const cfg = JSON.parse(JSON.stringify(params));
+    return cfg;
+  }
+
+  const resetBtn = document.createElement('button');
+  resetBtn.type = 'button';
+  resetBtn.className = 'mini-btn synth-reset-btn';
+  resetBtn.textContent = 'RESETEAR AL PRESET';
+  resetBtn.addEventListener('click', () => {
+    syncFromPreset(inst._presetKey || 'ARCO');
+    const eng = getEngine();
+    if (eng) eng.cambiarPreset(id, inst._presetKey || 'ARCO');
+  });
+  panel.appendChild(resetBtn);
+
+  function syncFromPreset(presetKey) {
+    const preset = PRESETS[presetKey] || {};
+    tipo = preset.tipo || 'Synth';
+    params = preset.config ? JSON.parse(JSON.stringify(preset.config)) : {};
+    filterFreq = preset.effects?.filterFreq ?? 8000;
+
+    tipoSel.value = tipo;
+    const oscType = params.oscillator?.type || 'sine';
+    ondaSel.value = ONDAS.includes(oscType) ? oscType : 'sine';
+
+    atkR.set(params.envelope?.attack  ?? 0.1);
+    decR.set(params.envelope?.decay   ?? 0.5);
+    susR.set(params.envelope?.sustain ?? 0.5);
+    relR.set(params.envelope?.release ?? 1.0);
+    filR.set(filterFreq);
+    harR.set(params.harmonicity     ?? 2);
+    modR.set(params.modulationIndex ?? 5);
+    updateConditional();
+  }
+
+  syncFromPreset(inst._presetKey || 'ARCO');
+
+  return { el: panel, syncFromPreset };
+}
+
+function makePanelRange(label, min, max, step, initial, format, onInput) {
+  const r = makeRange(label, min, max, step, initial, format, onInput);
+  r.set = v => {
+    const clamped = Math.max(min, Math.min(max, v));
+    r.input.value = String(clamped);
+    r.value.textContent = format(clamped);
+  };
+  return r;
+}
+
 // ── Instrumentos: señal, luz y sonido ──
 function buildSonidoCard(instIds, instConfig, instrumentos, getEngine) {
   const card = document.createElement('div'); card.className = 'sonido-card';
@@ -832,21 +950,37 @@ function buildSonidoCard(instIds, instConfig, instrumentos, getEngine) {
       sel.appendChild(opt);
     }
     dlbl.textContent = PRESETS[sel.value]?.desc || '';
+
+    const editToggle = document.createElement('button');
+    editToggle.type = 'button';
+    editToggle.className = 'mini-btn synth-edit-toggle';
+    editToggle.textContent = '+ SÍNTESIS';
+
+    const editPanel = buildSynthEditPanel(id, inst, getEngine);
+    editPanel.el.style.display = 'none';
+
+    editToggle.addEventListener('click', () => {
+      const open = editPanel.el.style.display !== 'none';
+      editPanel.el.style.display = open ? 'none' : '';
+      editToggle.textContent = open ? '+ SÍNTESIS' : '− SÍNTESIS';
+      editToggle.classList.toggle('active', !open);
+    });
+
     sel.addEventListener('change', () => {
       const preset = PRESETS[sel.value];
       dlbl.textContent = preset?.desc || '';
       inst._presetKey = sel.value;
-      
+      editPanel.syncFromPreset(sel.value);
+
       const newVol = preset?.volume ?? -18;
       inst._volumenDb = newVol;
       const volInput = row.querySelector('input[type="range"]');
       if (volInput) {
         volInput.value = newVol;
-        // update the bold label span which is the next sibling
         const volVal = volInput.nextElementSibling;
         if (volVal) volVal.textContent = `${Math.round(newVol)} dB`;
       }
-      
+
       const eng = getEngine();
       if (eng && eng._running) eng.cambiarPreset(id, sel.value);
     });
@@ -880,16 +1014,25 @@ function buildSonidoCard(instIds, instConfig, instrumentos, getEngine) {
 
     const signalRow = makeRange('PRESIÓN', 0, 1, 0.01, inst._manualSignal ?? 0, v => v.toFixed(2), v => { inst._manualSignal = v; touchInst(); });
     const blendRow  = makeRange('GESTO', 0, 1, 0.01, inst._manualBlend ?? 0, v => `${Math.round(v * 100)}%`, v => { inst._manualBlend = v; touchInst(); });
-    const advanceRow = makeRange('PERMISO', -0.35, 0.45, 0.01, inst._advanceBias ?? 0, v => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%`, v => { inst._advanceBias = v; touchInst(); });
-    const mutaRow = makeRange('TIMBRE', 0, 1, 0.01, inst._manualMuta ?? 0, v => v.toFixed(2), v => { inst._manualMuta = v; touchInst(); });
-    const glowRow = makeRange('AURA', 0.2, 3, 0.05, inst._glowRadius ?? 1, v => `${v.toFixed(1)}x`, v => { inst._glowRadius = v; touchInst(); });
-    const lightRow = makeRange('BRILLO', 0.4, 2.5, 0.05, inst._lightGain ?? 1, v => `${v.toFixed(1)}x`, v => { inst._lightGain = v; touchInst(); });
+    const syncPresion = () => {
+      const active = parseFloat(blendRow.input.value) > 0.02;
+      signalRow.el.style.opacity = active ? '' : '0.35';
+      signalRow.el.title = active ? '' : 'Sube GESTO para activar PRESIÓN';
+    };
+    blendRow.input.addEventListener('input', syncPresion);
+    syncPresion();
+    const advanceRow = makeRange('PASO', -0.35, 0.45, 0.01, inst._advanceBias ?? 0, v => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%`, v => { inst._advanceBias = v; touchInst(); });
+    const mutaRow = makeRange('APERTURA', 0, 1, 0.01, inst._manualMuta ?? 0, v => v.toFixed(2), v => { inst._manualMuta = v; touchInst(); });
+    const glowRow = makeRange('GLIDE', 0, 0.4, 0.01, inst._glideTime ?? 0, v => `${v.toFixed(2)}s`, v => { inst._glideTime = v; touchInst(); });
+    const lightRow = makeRange('BRILLO', -12, 12, 0.5, inst._brilloGain ?? 0, v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}dB`, v => { inst._brilloGain = v; touchInst(); });
     const volRow = makeRange('VOL', -40, 12, 1, inst._volumenDb ?? -18, v => `${Math.round(v)} dB`, v => { inst._volumenDb = v; touchInst(); });
 
     row.appendChild(lbl);
     row.appendChild(status);
     row.appendChild(sel);
     row.appendChild(dlbl);
+    row.appendChild(editToggle);
+    row.appendChild(editPanel.el);
     row.appendChild(colorRow);
     row.appendChild(signalRow.el);
     row.appendChild(blendRow.el);

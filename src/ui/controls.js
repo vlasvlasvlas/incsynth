@@ -274,12 +274,18 @@ export function buildNoticiasCard(noticiasFuente) {
   });
   selMedio.addEventListener('change', apply);
 
-  if (catalog[0]) selPais.value = catalog[0].id;
+  const initSelection = noticiasFuente.getSelection?.();
+  if (initSelection?.countryId) {
+    selPais.value = initSelection.countryId;
+  } else if (catalog[0]) {
+    selPais.value = catalog[0].id;
+  }
   fillMedios();
-  const selection = noticiasFuente.getSelection?.();
-  estado.textContent = selection
-    ? `${selection.countryLabel} / ${selection.sourceLabel}`
-    : 'Global / todos los medios';
+  if (initSelection?.sourceId && initSelection.sourceId !== 'all') {
+    selMedio.value = initSelection.sourceId;
+  }
+  estado.textContent = 'cargando RSS...';
+  setTimeout(() => apply(), 0);
 
   return card;
 }
@@ -405,6 +411,15 @@ export function buildLenteCard(paisesData, lenteFuente, instrumentos) {
 
   selPais.addEventListener('change', update);
   selInd.addEventListener('change', update);
+
+  // Selección inicial: primer país + primer indicador disponibles
+  if (paisesData.paises.length > 0) {
+    selPais.value = paisesData.paises[0].codigo;
+  }
+  if (paisesData.indicadores.length > 0) {
+    selInd.value = paisesData.indicadores[0].codigo;
+  }
+  setTimeout(() => update(), 0);
 
   setInterval(() => {
     const pOptions = selPais.options;
