@@ -24,6 +24,8 @@ import mappings from './data/mappings.json';
 import paisesData from './data/paises.json';
 import * as cuartoMusico from './ai/cuartoMusico.js';
 import { buildCuartoMusicoCard } from './ui/cuartoMusicoControl.js';
+import { Expression } from './audio/Expression.js';
+import { buildExpressionCard } from './ui/expressionControl.js';
 
 const SOURCE_EXPLAINERS = {
   clima: {
@@ -177,6 +179,7 @@ async function init() {
 
   // ── Panel de control en sidebar ──
   let engine = null;
+  const expression = new Expression(instIds);
   const primaryEl     = document.getElementById('panel-primary');
   const tableroEl     = document.getElementById('panel-tablero');
   const salaPanelRoot = document.createElement('div');
@@ -230,6 +233,8 @@ async function init() {
 
   // Timbres
   const sonidoPanel = buildSonidoCard(instIds, config.instrumentos, instrumentos, () => engine);
+  const expressionPanel = buildExpressionCard(expression, instrumentos, () => engine);
+  tableroEl.appendChild(expressionPanel.card);
   tableroEl.appendChild(sonidoPanel.card);
 
   // BPM + Pulso
@@ -240,16 +245,31 @@ async function init() {
   const btnPlay = document.getElementById('btn-detener');
   btnPlay.disabled = false;
 
-  const doToggle = () => {
+  const doToggle = async () => {
     if (!engine) {
       // Iniciar
-      engine = new AudioEngine(config, patrones, sala, instrumentos, () => {});
+      engine = new AudioEngine(config, patrones, sala, instrumentos, () => {}, expression);
+      if (expression.ended) engine._newCycle();
+      const startingEngine = engine;
+      engine.onEnded = () => {
+        if (engine !== startingEngine) return;
+        engine.dispose(); engine = null; window._engine = null;
+        btnPlay.textContent = '▶'; btnPlay.classList.remove('playing'); btnPlay.title = 'Nueva interpretación';
+      };
       ritmoPanel.apply(engine);
       window._engine = engine;
-      engine.start();
       btnPlay.textContent = '■';
       btnPlay.classList.add('playing');
       btnPlay.title = 'Detener';
+      try { await startingEngine.start(); }
+      catch (error) {
+        console.error('No se pudo iniciar el audio:', error);
+        startingEngine.dispose();
+        if (engine === startingEngine) {
+          engine = null; window._engine = null;
+          btnPlay.textContent = '▶'; btnPlay.classList.remove('playing'); btnPlay.title = 'Reintentar audio';
+        }
+      }
     } else {
       // Detener
       engine.dispose(); engine = null;
@@ -298,6 +318,16 @@ async function init() {
     btnSidebar.classList.toggle('active');
   });
 
+  // ── Sidebar tabs ──
+  document.querySelectorAll('.sb-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.sb-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.sb-tab-panel').forEach(p => p.classList.add('sb-hidden'));
+      tab.classList.add('active');
+      document.getElementById(`tab-${tab.dataset.tab}`).classList.remove('sb-hidden');
+    });
+  });
+
   // ── About modal (?) ──
   const aboutModal    = document.getElementById('about-modal');
   const modalClose    = document.getElementById('modal-close');
@@ -321,6 +351,7 @@ async function init() {
     for (const id in senalUpdates) senalUpdates[id]();
     updateSalaPanel();
     sonidoPanel.update();
+    expressionPanel.update();
     const mb = document.getElementById('momentum-bar');
     if (mb) mb.style.width = `${sala.getMomentum() * 100}%`;
 
@@ -414,7 +445,7 @@ function buildSalaPanel(root, instIds, instrumentos, sala) {
       const inst = instrumentos[id];
       if (!inst) return '';
       const ui = inst.getEstadoUI();
-      const breakdown = ui.probBreakdown || (inst.señal ? inst.getProbabilidadBreakdown() : null);
+      const breakdown = ui.probBreakdown;
       const p = breakdown?.p ?? 0;
       const motivo = readableMotivo(breakdown?.motivo);
       const world = breakdown?.api ?? 0;
@@ -712,7 +743,7 @@ function buildSenalCard(instId, fuenteId, cfg, fuente, inst, mapeo) {
     }
 
     // Semáforo de probabilidad
-    const probBreakdown = ui.probBreakdown || (inst.señal ? inst.getProbabilidadBreakdown() : null);
+    const probBreakdown = ui.probBreakdown;
     if (probBreakdown) {
       const p      = probBreakdown.p;
       const sfill  = document.getElementById(`sem-fill-${instId}`);
@@ -820,11 +851,19 @@ function buildSynthEditPanel(id, inst, getEngine) {
   const panel = document.createElement('div');
   panel.className = 'synth-edit-panel';
 
+  let initializing = true;
   let tipo = 'Synth';
   let params = {};
   let filterFreq = 8000;
 
+  function saveCustom() {
+    if (initializing) return;
+    inst._autoTimbre = false;
+    inst._customPreset = { tipo, config: buildConfig(), _filterBase: filterFreq, volume: inst._volumenDb };
+  }
   function patch(changes) {
+    if (initializing) return;
+    saveCustom();
     const eng = getEngine();
     if (eng) eng.patchSynth(id, changes);
   }
@@ -837,6 +876,7 @@ function buildSynthEditPanel(id, inst, getEngine) {
   TIPOS.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; tipoSel.appendChild(o); });
   tipoSel.addEventListener('change', () => {
     tipo = tipoSel.value;
+    saveCustom();
     updateConditional();
     const eng = getEngine();
     if (eng) eng.patchSynthType(id, tipo, buildConfig());
@@ -862,7 +902,7 @@ function buildSynthEditPanel(id, inst, getEngine) {
   const decR = makePanelRange('DECAY',   0.001, 5,     0.001, 0.5,  v => `${v.toFixed(2)}s`, v => { if (!params.envelope) params.envelope = {}; params.envelope.decay   = v; patch({ envelope: { decay:   v } }); });
   const susR = makePanelRange('SUSTAIN', 0,     1,     0.01,  0.5,  v => v.toFixed(2),        v => { if (!params.envelope) params.envelope = {}; params.envelope.sustain = v; patch({ envelope: { sustain: v } }); });
   const relR = makePanelRange('RELEASE', 0.05,  12,    0.01,  1.0,  v => `${v.toFixed(2)}s`, v => { if (!params.envelope) params.envelope = {}; params.envelope.release = v; patch({ envelope: { release: v } }); });
-  const filR = makePanelRange('FILTRO',  120,   18000, 10,    8000, v => `${Math.round(v)}Hz`, v => { filterFreq = v; const eng = getEngine(); if (eng) eng.patchFilter(id, v); });
+  const filR = makePanelRange('FILTRO',  120,   18000, 10,    8000, v => `${Math.round(v)}Hz`, v => { filterFreq = v; saveCustom(); const eng = getEngine(); if (eng) eng.patchFilter(id, v); });
   const harR = makePanelRange('HARM',    0.1,   20,    0.1,   2,    v => v.toFixed(1),        v => { params.harmonicity = v; patch({ harmonicity: v }); });
   const modR = makePanelRange('MOD IDX', 0,     40,    0.1,   5,    v => v.toFixed(1),        v => { params.modulationIndex = v; patch({ modulationIndex: v }); });
 
@@ -887,6 +927,7 @@ function buildSynthEditPanel(id, inst, getEngine) {
   resetBtn.className = 'mini-btn synth-reset-btn';
   resetBtn.textContent = 'RESETEAR AL PRESET';
   resetBtn.addEventListener('click', () => {
+    inst._customPreset = null; inst._autoTimbre = false;
     syncFromPreset(inst._presetKey || 'ARCO');
     const eng = getEngine();
     if (eng) eng.cambiarPreset(id, inst._presetKey || 'ARCO');
@@ -894,10 +935,10 @@ function buildSynthEditPanel(id, inst, getEngine) {
   panel.appendChild(resetBtn);
 
   function syncFromPreset(presetKey) {
-    const preset = PRESETS[presetKey] || {};
+    const preset = inst._customPreset || PRESETS[presetKey] || {};
     tipo = preset.tipo || 'Synth';
     params = preset.config ? JSON.parse(JSON.stringify(preset.config)) : {};
-    filterFreq = preset.effects?.filterFreq ?? 8000;
+    filterFreq = preset._filterBase ?? preset.effects?.filterFreq ?? 900;
 
     tipoSel.value = tipo;
     const oscType = params.oscillator?.type || 'sine';
@@ -914,6 +955,7 @@ function buildSynthEditPanel(id, inst, getEngine) {
   }
 
   syncFromPreset(inst._presetKey || 'ARCO');
+  initializing = false;
 
   return { el: panel, syncFromPreset };
 }
@@ -969,17 +1011,14 @@ function buildSonidoCard(instIds, instConfig, instrumentos, getEngine) {
     sel.addEventListener('change', () => {
       const preset = PRESETS[sel.value];
       dlbl.textContent = preset?.desc || '';
-      inst._presetKey = sel.value;
+      inst._customPreset = null; inst._autoTimbre = false;
+      if (!getEngine()?._running) inst._presetKey = sel.value;
       editPanel.syncFromPreset(sel.value);
 
       const newVol = preset?.volume ?? -18;
       inst._volumenDb = newVol;
-      const volInput = row.querySelector('input[type="range"]');
-      if (volInput) {
-        volInput.value = newVol;
-        const volVal = volInput.nextElementSibling;
-        if (volVal) volVal.textContent = `${Math.round(newVol)} dB`;
-      }
+      volRow.input.value = newVol;
+      volRow.value.textContent = `${Math.round(newVol)} dB`;
 
       const eng = getEngine();
       if (eng && eng._running) eng.cambiarPreset(id, sel.value);
@@ -1012,18 +1051,6 @@ function buildSonidoCard(instIds, instConfig, instrumentos, getEngine) {
     colorRow.appendChild(colorInp);
     colorRow.appendChild(previewBtn);
 
-    const signalRow = makeRange('PRESIÓN', 0, 1, 0.01, inst._manualSignal ?? 0, v => v.toFixed(2), v => { inst._manualSignal = v; touchInst(); });
-    const blendRow  = makeRange('GESTO', 0, 1, 0.01, inst._manualBlend ?? 0, v => `${Math.round(v * 100)}%`, v => { inst._manualBlend = v; touchInst(); });
-    const syncPresion = () => {
-      const active = parseFloat(blendRow.input.value) > 0.02;
-      signalRow.el.style.opacity = active ? '' : '0.35';
-      signalRow.el.title = active ? '' : 'Sube GESTO para activar PRESIÓN';
-    };
-    blendRow.input.addEventListener('input', syncPresion);
-    syncPresion();
-    const advanceRow = makeRange('PASO', -0.35, 0.45, 0.01, inst._advanceBias ?? 0, v => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%`, v => { inst._advanceBias = v; touchInst(); });
-    const mutaRow = makeRange('APERTURA', 0, 1, 0.01, inst._manualMuta ?? 0, v => v.toFixed(2), v => { inst._manualMuta = v; touchInst(); });
-    const glowRow = makeRange('GLIDE', 0, 0.4, 0.01, inst._glideTime ?? 0, v => `${v.toFixed(2)}s`, v => { inst._glideTime = v; touchInst(); });
     const lightRow = makeRange('BRILLO', -12, 12, 0.5, inst._brilloGain ?? 0, v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}dB`, v => { inst._brilloGain = v; touchInst(); });
     const volRow = makeRange('VOL', -40, 12, 1, inst._volumenDb ?? -18, v => `${Math.round(v)} dB`, v => { inst._volumenDb = v; touchInst(); });
 
@@ -1034,15 +1061,10 @@ function buildSonidoCard(instIds, instConfig, instrumentos, getEngine) {
     row.appendChild(editToggle);
     row.appendChild(editPanel.el);
     row.appendChild(colorRow);
-    row.appendChild(signalRow.el);
-    row.appendChild(blendRow.el);
-    row.appendChild(advanceRow.el);
-    row.appendChild(mutaRow.el);
-    row.appendChild(glowRow.el);
     row.appendChild(lightRow.el);
     row.appendChild(volRow.el);
     card.appendChild(row);
-    rows[id] = { status, signalRow, blendRow, advanceRow, mutaRow, glowRow, lightRow, volRow };
+    rows[id] = { status, lightRow, volRow, sel, dlbl, editPanel, lastPreset: inst._presetKey };
   }
   return {
     card,
@@ -1052,7 +1074,13 @@ function buildSonidoCard(instIds, instConfig, instrumentos, getEngine) {
         const row = rows[id];
         if (!inst || !row) continue;
         const ui = inst.getEstadoUI();
-        const b = inst.señal ? inst.getProbabilidadBreakdown() : null;
+        const b = ui.probBreakdown;
+        if (row.lastPreset !== inst._presetKey) {
+          row.lastPreset = inst._presetKey;
+          row.sel.value = inst._presetKey;
+          row.dlbl.textContent = PRESETS[inst._presetKey]?.desc || '';
+          row.editPanel.syncFromPreset(inst._presetKey);
+        }
         row.status.textContent = `${ui.estado} · patrón ${Math.min(ui.posicion + 1, inst.sala.numPatrones)}/${inst.sala.numPatrones} · P ${Math.round((b?.p ?? 0) * 100)}% · señal ${ui.señal.toFixed(2)}`;
       }
     }
@@ -1092,7 +1120,7 @@ async function previewPreset(presetKey, id, volumeDb = 0) {
   const filter = new Tone.Filter(preset.effects?.filterFreq || 9000, preset.effects?.filterType || 'lowpass').toDestination();
   const synth = createToneSynth(preset);
   synth.connect(filter);
-  synth.volume.value = (preset.volume ?? -18) + volumeDb;
+  synth.volume.value = volumeDb;
 
   const now = Tone.now() + 0.03;
   const notes = id === 'percusion' ? ['C2', 'G2', 'C2'] : ['C4', 'E4', 'G4'];
@@ -1230,7 +1258,7 @@ function buildRitmoCard(getEngine) {
       engine.setBPM(bpmInput.value);
       engine._pulse?.setWaveform(timbreSel.value);
       engine._pulse?.setFrequency(freqInput.value);
-      engine._pulse?.setVolume(pulsoSlider.value);
+      engine._pulse?.setVolume(Number(pulsoSlider.value) <= -58 ? -Infinity : Number(pulsoSlider.value));
       engine._pulse?.setKickEnabled(kickEnabled);
     },
   };

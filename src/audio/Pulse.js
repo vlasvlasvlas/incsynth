@@ -7,6 +7,8 @@ export class Pulse {
     this._waveform = 'sine';
     this._kickEnabled = false;
     this._step = 0;
+    this._expressionGain = 1;
+    this._kickGain = 1;
     this._synth = new Tone.Synth({
       oscillator: { type: this._waveform },
       envelope: { attack: 0.002, decay: 0.1, sustain: 0, release: 0.05 },
@@ -29,12 +31,19 @@ export class Pulse {
   triggerAt(time) {
     // El pulso nunca se desplaza ni desaparece: es la referencia común.
     // La volatilidad solo reduce levemente su acento.
-    const velocity = 1 - this.degradacion * 0.22;
-    this._synth.triggerAttackRelease(this._note, '16n', time, velocity);
-    if (this._kickEnabled && this._step % 2 === 0) {
-      this._kick.triggerAttackRelease('C1', '8n', time, 0.82);
+    const velocity = (1 - this.degradacion * 0.22) * this._expressionGain;
+    if (velocity > 0.001) this._synth.triggerAttackRelease(this._note, '16n', time, velocity);
+    if (this._kickEnabled && this._kickGain > 0.001 && this._step % 2 === 0) {
+      this._kick.triggerAttackRelease('C1', '8n', time, 0.82 * this._kickGain);
     }
     this._step++;
+  }
+
+  setExpression(pulseGain = 1, kickGain = 1, attack = 0.002) {
+    // Smooth presence without moving any beat or overriding the chosen volume.
+    this._expressionGain += (pulseGain - this._expressionGain) * 0.12;
+    this._kickGain += (kickGain - this._kickGain) * 0.12;
+    this._synth.set({ envelope: { attack } });
   }
 
   setVolume(db) {

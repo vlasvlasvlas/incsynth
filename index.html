@@ -37,21 +37,26 @@
   </main>
 
   <aside id="sidebar">
-    <div id="sidebar-inner">
-      <div class="sb-section-title">CONDUCCIÓN</div>
-      <div id="panel-primary"></div>
-
-      <div class="sb-sep"></div>
-
-      <!-- Señales en tiempo real -->
-      <div class="sb-section-title">SEÑALES EN VIVO</div>
+    <!-- Señales: siempre visibles -->
+    <div id="sb-signals-section">
+      <div class="sb-section-label">SEÑALES EN VIVO</div>
       <div id="senales-strip"></div>
+    </div>
 
-      <div class="sb-sep"></div>
+    <!-- Tab bar -->
+    <div class="sb-tab-bar">
+      <button class="sb-tab active" data-tab="conduccion">CONDUCCIÓN</button>
+      <button class="sb-tab" data-tab="fuentes">FUENTES Y SONIDO</button>
+    </div>
 
-      <!-- Panel de config -->
-      <div class="sb-section-title">FUENTES Y SONIDO</div>
-      <div id="panel-tablero"></div>
+    <!-- Tab panels -->
+    <div class="sb-tab-panels">
+      <div class="sb-tab-panel" id="tab-conduccion">
+        <div id="panel-primary"></div>
+      </div>
+      <div class="sb-tab-panel sb-hidden" id="tab-fuentes">
+        <div id="panel-tablero"></div>
+      </div>
     </div>
   </aside>
 

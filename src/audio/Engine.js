@@ -3,9 +3,10 @@ import { Pulse }   from './Pulse.js';
 import { PRESETS, DEFAULTS } from './presets.js';
 import { ESTADOS } from '../logic/StateMachine.js';
 import * as cuartoMusico from '../ai/cuartoMusico.js';
+import { Expression } from './Expression.js';
 
 export class AudioEngine {
-  constructor(config, patrones, sala, instrumentos, onCiclo) {
+  constructor(config, patrones, sala, instrumentos, onCiclo, expression = null) {
     this.patrones     = patrones;
     this.sala         = sala;
     this.instrumentos = instrumentos;
@@ -18,6 +19,11 @@ export class AudioEngine {
     this._transportEvents = new Set();
     this._patternEvents = {};
     this._pulseEvent = null;
+    this.expression = expression || new Expression(Object.keys(instrumentos));
+    this._retiring = new Set();
+    this._pendingPresets = {};
+    this._disposed = false;
+    this._startGeneration = 0;
 
     // Reverb compartida contenida para mantener legible la grilla.
     this._reverb = new Tone.Reverb({ decay: 2.8, wet: 0.12 }).toDestination();
@@ -25,28 +31,44 @@ export class AudioEngine {
 
     // Construir un synth por instrumento según su preset por defecto
     for (const id in config.instrumentos) {
-      const presetKey = instrumentos[id]?._presetKey || DEFAULTS[id] || 'ARCO';
-      this._buildSynth(id, presetKey);
+      const presetKey = instrumentos[id]?._pendingPresetKey || instrumentos[id]?._presetKey || DEFAULTS[id] || 'ARCO';
+      this._buildSynth(id, instrumentos[id]?._customPreset || presetKey);
+      this.instrumentos[id]._presetKey = presetKey;
+      delete this.instrumentos[id]._pendingPresetKey;
     }
   }
 
+  _editablePreset(id) {
+    this._customPresets ||= {};
+    let pending = this._pendingPresets[id];
+    if (typeof pending === 'string') {
+      pending = { ...structuredClone(PRESETS[pending]), _baseKey: pending };
+      this._pendingPresets[id] = pending;
+    }
+    const preset = pending || this._customPresets[id] || this._snapshotPreset(id);
+    if (!pending) this._customPresets[id] = preset;
+    this.instrumentos[id]._customPreset = preset;
+    this.instrumentos[id]._autoTimbre = false;
+    return preset;
+  }
+
   patchSynth(id, changes) {
-    try { this.synths[id]?.set(changes); } catch (_) {}
-    this._customPresets = this._customPresets || {};
-    if (!this._customPresets[id]) this._customPresets[id] = this._snapshotPreset(id);
-    _mergeConfig(this._customPresets[id].config, changes);
+    const preset = this._editablePreset(id);
+    _mergeConfig(preset.config, changes);
+    if (!this._pendingPresets[id]) this.synths[id]?.set(changes);
   }
 
   patchFilter(id, freq) {
-    this._customPresets = this._customPresets || {};
-    if (!this._customPresets[id]) this._customPresets[id] = this._snapshotPreset(id);
-    this._customPresets[id]._filterBase = freq;
-    try { if (this.filtros[id]) this.filtros[id].frequency.value = freq; } catch (_) {}
+    this._editablePreset(id)._filterBase = freq;
+    if (this.filtros[id]) this.filtros[id].frequency.value = freq;
   }
 
   patchSynthType(id, tipo, params) {
     const vol = this.instrumentos[id]?._volumenDb ?? -18;
-    this._buildSynth(id, { tipo, config: params, volume: vol });
+    this._pendingPresets[id] = { tipo, config: params, volume: vol };
+    this.instrumentos[id]._customPreset = this._pendingPresets[id];
+    this.instrumentos[id]._autoTimbre = false;
+    if (!this._running) this._applyPendingPreset(id);
   }
 
   _snapshotPreset(id) {
@@ -59,12 +81,15 @@ export class AudioEngine {
   }
 
   _buildSynth(id, presetKeyOrObj) {
-    // Liberar toda la cadena anterior antes de reconstruir el timbre.
-    if (this.synths[id]) { try { this.synths[id].dispose(); } catch (_) {} }
-    if (this.localEffects?.[id]) {
-      this.localEffects[id].forEach(node => {
-        try { node.dispose(); } catch (_) {}
-      });
+    // Fade old and new channels together; retire old nodes after their tails.
+    const old = this.synths[id] ? {
+      synth: this.synths[id], nodes: this.localEffects[id], gain: this.channelGains[id],
+    } : null;
+    if (old) {
+      this._releaseSynth(old.synth, Tone.now());
+      old.gain.gain.rampTo(0, 2);
+      this._retiring.add(old);
+      old.timer = setTimeout(() => this._disposeRetired(old), 2500);
     }
 
     const isCustom = typeof presetKeyOrObj === 'object' && presetKeyOrObj !== null;
@@ -101,7 +126,13 @@ export class AudioEngine {
       lastNode.connect(chain[i]);
       lastNode = chain[i];
     }
-    lastNode.connect(this._reverb);
+    this.channelGains ||= {};
+    const channelGain = new Tone.Gain(old ? 0 : 1);
+    this.channelGains[id] = channelGain;
+    lastNode.connect(channelGain);
+    channelGain.connect(this._reverb);
+    if (old) channelGain.gain.rampTo(1, 2);
+    chain.push(channelGain);
 
     this.localEffects = this.localEffects || {};
     this.localEffects[id] = chain;
@@ -128,45 +159,82 @@ export class AudioEngine {
     this.synths[id]  = synth;
     this.filtros[id] = filtro;
     this._presetKeys = this._presetKeys || {};
-    if (!isCustom) this._presetKeys[id] = presetKeyOrObj;
+    this._presetKeys[id] = isCustom ? this.instrumentos[id]._presetKey : presetKeyOrObj;
     // El synth nuevo ya tiene el tipo correcto; registrar para evitar set redundante.
     this._lastOscType = this._lastOscType || {};
     this._lastOscType[id] = preset.config?.oscillator?.type ?? null;
   }
 
-  cambiarPreset(id, presetKey) {
+  cambiarPreset(id, presetKey, automatic = false) {
     if (!PRESETS[presetKey]) return;
-    if (this.instrumentos[id]) this.instrumentos[id]._presetKey = presetKey;
-    if (this._customPresets) delete this._customPresets[id];
-    this._buildSynth(id, presetKey);
+    const inst = this.instrumentos[id];
+    if (!automatic) inst._autoTimbre = false;
+    inst._customPreset = null;
+    this._pendingPresets[id] = presetKey;
+    inst._pendingPresetKey = presetKey;
+    if (!this._running) this._applyPendingPreset(id);
+  }
+
+  _applyPendingPreset(id) {
+    const preset = this._pendingPresets[id];
+    if (!preset) return;
+    delete this._pendingPresets[id];
+    delete this.instrumentos[id]._pendingPresetKey;
+    if (typeof preset === 'string') {
+      delete this._customPresets?.[id];
+      this.instrumentos[id]._presetKey = preset;
+    }
+    if (preset._baseKey) this.instrumentos[id]._presetKey = preset._baseKey;
+    this._buildSynth(id, preset);
+  }
+
+  _releaseSynth(synth, time) {
+    if (typeof synth.releaseAll === 'function') synth.releaseAll(time);
+    else synth.triggerRelease?.(time);
+  }
+
+  _disposeRetired(old) {
+    clearTimeout(old.timer);
+    old.synth.dispose();
+    old.nodes.forEach(node => node.dispose());
+    this._retiring.delete(old);
   }
 
   async start() {
-    if (this._running) return;
-    await Tone.start();
-    await this._reverbReady; // asegurar que el impulse response esté listo
-    this._running = true;
-    Tone.Transport.stop();
-    Tone.Transport.cancel(0);
-    Tone.Transport.position = 0;
-    Tone.Transport.bpm.value = this._lastBpm;
-    this._schedulePulse();
+    if (this._running || this._starting || this._disposed) return;
+    this._starting = true;
+    const generation = ++this._startGeneration;
+    try {
+      await Tone.start();
+      await this._reverbReady; // asegurar que el impulse response esté listo
+      if (this._disposed || generation !== this._startGeneration) return;
+      this._running = true;
+      this.expression.pause();
+      const originTick = Tone.Transport.state === 'started' ? Tone.Transport.ticks + this._notationToTicks('8n') : 0;
+      if (Tone.Transport.state !== 'started') Tone.Transport.position = 0;
+      Tone.Transport.bpm.value = this._lastBpm;
+      this._schedulePulse();
 
-    let idx = 0;
-    for (const id in this.instrumentos) {
-      this.instrumentos[id].sala.registrarInstrumento(id, 0);
-      this.instrumentos[id].reiniciarMaduracion?.();
-      const startTick = this._notationToTicks('8n') * idx;
-      this._schedulePatternCycle(id, startTick);
-      idx++;
-    }
-    Tone.Transport.start('+0.08');
+      let idx = 0;
+      for (const id in this.instrumentos) {
+        this.instrumentos[id].sala.registrarInstrumento(id, this.instrumentos[id].posicion);
+        this.instrumentos[id].reiniciarMaduracion?.();
+        const startTick = originTick + this._notationToTicks('8n') * idx;
+        this._schedulePatternCycle(id, startTick);
+        idx++;
+      }
+      if (Tone.Transport.state !== 'started') Tone.Transport.start('+0.08');
+    } finally { this._starting = false; }
   }
 
   stop() {
     this._running = false;
-    Tone.Transport.stop();
-    Tone.Transport.cancel(0);
+    ++this._startGeneration;
+    this.expression.pause();
+    for (const event of this._transportEvents) Tone.Transport.clear(event);
+    for (const synth of Object.values(this.synths)) {
+      this._releaseSynth(synth, Tone.now());
+    }
     this._transportEvents.clear();
     this._patternEvents = {};
     this._pulseEvent = null;
@@ -175,28 +243,37 @@ export class AudioEngine {
   _schedulePulse() {
     this._pulseEvent = Tone.Transport.scheduleRepeat(time => {
       if (!this._running) return;
+      this._actualizarSintesis(time);
       this._pulse.triggerAt(time);
-      this.sala.pulso();
-      this._actualizarSintesis();
+      if (!this.expression.ended) this.sala.pulso();
+      if (this.expression.shouldLoop()) this._newCycle();
+      else if (this.expression.ended && this.expression.settings.ending === 'coda') {
+        this.stop();
+        this.onEnded?.();
+      }
     }, '8n', 0);
     this._transportEvents.add(this._pulseEvent);
   }
 
-  _actualizarSintesis() {
+  _actualizarSintesis(time = Tone.now()) {
     const mom = this.sala.getMomentum();
     // El momentum abre el espacio sin borrar articulación.
     // Rango expresivo: 0.12 (sala seca/quieta) a 0.65 (sala mojada/activa)
-    this._reverb.wet.rampTo(0.12 + mom * 0.53, 0.5);
+    const expression = this.expression.update(time, this.instrumentos, this.patrones.length - 1);
+    this._pulse.setExpression(expression.pulseGain, expression.kickGain, expression.pulseAttack);
+    this._reverb.wet.rampTo(expression.reverb ?? (0.12 + mom * 0.53), 3);
 
     for (const id in this.instrumentos) {
       const inst = this.instrumentos[id];
       const ui   = inst.getEstadoUI();
+      const feeling = expression.voices[id];
+      inst._expression = { ...feeling, stage: expression.stage };
       if (!this.synths[id]) continue;
 
       // MUTA → filtro cutoff (el panel de síntesis puede fijar un piso manual)
       const filterBase = this._customPresets?.[id]?._filterBase ?? 900;
       const mutaAmt   = Math.max(ui.muta, inst._manualMuta ?? 0);
-      const cutoff    = filterBase + mutaAmt * Math.max(0, 14400 - filterBase);
+      const cutoff    = (filterBase + mutaAmt * Math.max(0, 14400 - filterBase)) * feeling.brightness;
       this.filtros[id].frequency.rampTo(cutoff, 0.3);
 
       const presetConf = (this._customPresets?.[id] || PRESETS[this._presetKeys?.[id]])?.config || {};
@@ -213,6 +290,13 @@ export class AudioEngine {
 
       // Cuarto Músico: VAE de timbre modula parámetros de síntesis
       const vaeParams = cuartoMusico.getTimbreIA(inst, this.sala);
+      for (const params of [presetParams, vaeParams].filter(Boolean)) {
+        params.attack *= feeling.attackScale;
+        params.release *= feeling.releaseScale;
+        params.sustain *= feeling.sustainScale;
+        if ('modIndex' in params) params.modIndex *= feeling.modulationScale;
+        if ('modulationIndex' in params) params.modulationIndex *= feeling.modulationScale;
+      }
       // Tipo de oscilador deseado: VAE cuando influencia > 50%, preset en otro caso.
       // Se setea SOLO cuando cambia para evitar que Tone.js recree el nodo en cada pulse
       // (bug: 'triangle8' ≠ 'fat8triangle' internamente → clack cada 8va nota).
@@ -245,7 +329,9 @@ export class AudioEngine {
       if (ui.estado === ESTADOS.DESBORDADO)  volBase += 3;
       if (ui.estado === ESTADOS.DESCANSANDO) volBase -= 50;
       if (ui.estado === ESTADOS.PERIFERICO)  volBase -= 8;
-      this.synths[id].volume.rampTo(volBase, 0.5);
+      this.synths[id].volume.rampTo(volBase + feeling.gainDb, 3);
+      // Coda gain is independent of the user's volume and remains finite.
+      this.channelGains[id].gain.rampTo(feeling.codaGain, 1);
     }
 
     // Pulso degradado por máxima volatilidad
@@ -290,23 +376,30 @@ export class AudioEngine {
     inst.tick();
     const ui = inst.getEstadoUI();
 
-    if (ui.estado === ESTADOS.DORMIDO) {
+    if (inst.posicion >= this.patrones.length) {
+      this.expression.markSounding(id, false);
+      return;
+    }
+    if (ui.estado === ESTADOS.DORMIDO || ui.estado === ESTADOS.ARMADO) {
+      this.expression.markSounding(id, false);
       this._schedulePatternCycle(id, startTick + this._notationToTicks('1m'));
       return;
     }
-    if (inst.posicion >= this.patrones.length) return;
-
+    const phrase = this.expression.phrase(id, this.instrumentos, inst._presetKey, inst._autoTimbre !== false);
+    if (phrase.preset && !this._pendingPresets[id]) this.cambiarPreset(id, phrase.preset, true);
+    this._applyPendingPreset(id);
+    const silent = phrase.rest || this.expression.ended || ui.estado === ESTADOS.DESCANSANDO;
+    this.expression.markSounding(id, !silent);
     const patron = this.patrones[inst.posicion];
     const durationTicks = this._patternDurationTicks(patron);
     let offsetTicks = 0;
 
     for (const ev of patron) {
-      // Silencio voluntario: Riley permite descansos internos dentro de un
-      // patrón. El verbo RETIENE modula la probabilidad de omitir notas.
+      // Expressive breathing preserves whole figures; legacy mode keeps note omissions.
       const retiene = inst._verbos?.RETIENE ?? 0;
-      const skipChance = retiene * 0.25;
+      const skipChance = this.expression.settings.enabled ? 0 : retiene * 0.25;
       const skip = Math.random() < skipChance;
-      if (ev.nota && ui.estado !== ESTADOS.DESCANSANDO && !skip) {
+      if (ev.nota && !silent && !skip) {
         const noteTick = startTick + offsetTicks;
         const trigger = time => {
           try {
@@ -322,11 +415,33 @@ export class AudioEngine {
     const finishTick = startTick + durationTicks;
     this._scheduleAtTick(finishTick, finishTime => {
       if (inst.posicion >= this.patrones.length) return;
-      const avanzo = inst.decidirAvance();
+      // At 53 the voice waits for its partners, then all fade through the coda.
+      const waiting = this.expression.settings.enabled && inst.posicion === this.patrones.length - 1;
+      const avanzo = waiting || phrase.rest ? false : inst.decidirAvance();
+      if (waiting || phrase.rest) inst.registrarEspera?.(waiting ? 'coda' : 'respiracion');
       if (this.onCiclo) this.onCiclo(id, inst.posicion, avanzo, inst.getEstadoUI());
       // El siguiente ciclo hereda el timestamp exacto del límite anterior.
       this._runPatternCycle(id, finishTick, finishTime);
     }, id);
+  }
+
+  _newCycle() {
+    for (const id of Object.keys(this._patternEvents)) {
+      for (const event of this._patternEvents[id]) { Tone.Transport.clear(event); this._transportEvents.delete(event); }
+    }
+    this._patternEvents = {};
+    Object.assign(this.sala, new this.sala.constructor(this.patrones.length));
+    this.expression.reset();
+    let index = 0;
+    for (const [id, inst] of Object.entries(this.instrumentos)) {
+      inst.posicion = 0;
+      inst.estado = ESTADOS.DORMIDO;
+      inst._probBreakdown = null;
+      inst.reiniciarMaduracion();
+      this.sala.registrarInstrumento(id, 0);
+      this.expression.voices[id].stage = -1;
+      if (this._running) this._schedulePatternCycle(id, Tone.Transport.ticks + this._notationToTicks('8n') * (++index));
+    }
   }
 
   // Transport conserva la posición musical al cambiar BPM.
@@ -348,7 +463,10 @@ export class AudioEngine {
   }
 
   dispose() {
+    if (this._disposed) return;
+    this._disposed = true;
     this.stop();
+    for (const old of [...this._retiring]) this._disposeRetired(old);
     this._pulse.dispose();
     try { this._reverb.dispose(); } catch (_) {}
     for (const id in this.synths) {

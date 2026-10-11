@@ -21,6 +21,7 @@ let _activo  = true;
 let _eventos = [];
 let _meta    = {};
 let _inicio  = null;
+let _eventCount = 0;
 
 // ── Control ──────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,7 @@ export function isActivo()   { return _activo; }
 export function iniciarSesion(meta = {}) {
   _inicio  = Date.now();
   _eventos = [];
+  _eventCount = 0;
   _meta = {
     version: 2,
     inicio:  new Date(_inicio).toISOString(),
@@ -66,6 +68,7 @@ export function registrarCiclo(id, instrumento, sala, avanzo, extras = {}) {
     id,
     pos:    instrumento?.posicion ?? 0,
     avanzo: !!avanzo,
+    expression: ui.expression || null,
     estado: ui.estado || '—',
     p:      round2(breakdown.p ?? 0),
     motivo: breakdown.motivo || '—',
@@ -110,7 +113,7 @@ export function registrarCiclo(id, instrumento, sala, avanzo, extras = {}) {
 
   _eventos.push(evento);
   if (_eventos.length > MAX_MEM) _eventos.shift();   // truncar viejos en RAM
-  if (_eventos.length % FLUSH_N === 0) _flushLS();   // backup periódico
+  if (++_eventCount % FLUSH_N === 0) _flushLS();   // backup periódico
 }
 
 export function actualizarMeta(patch = {}) {

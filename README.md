@@ -567,3 +567,74 @@ repetición, memoria, atención y convivencia. El sistema no pregunta solamente
 ## License
 
 MIT License — © 2026 [Vladimiro Bellini](https://github.com/vlasvlasvlas). Free to use and modify, attribution required.
+
+## Respiración y recorrido de una interpretación larga
+
+El panel **Fuentes y sonido → Respiración y recorrido** controla una capa
+expresiva basada en reglas. No incorpora modelos predictivos nuevos ni cambia
+el BPM. Puede apagarse para recuperar el comportamiento anterior de ejecución.
+Los controles de volumen, presets, síntesis y las capas IA existentes siguen
+ disponibles.
+
+- **Identidad y exposición:** cada voz conserva su timbre y modula presencia,
+  articulación, brillo, sustain y cola. Una memoria acotada de actividad favorece
+  recuperación tras una exposición prolongada. Es una aproximación compositiva,
+  no una medición de fatiga del oyente ni un analizador acústico.
+- **Respiración:** descansos de frases completas, con reentrada gradual. Sólo se
+  inicia un descanso expresivo si otra voz está activa, y no se programan dos
+  descansos expresivos simultáneos. Durante el descanso la voz conserva su patrón.
+- **Relevos:** el protagonismo rota lentamente. Las voces de fondo ceden presencia;
+  el volumen elegido por el usuario sigue siendo su referencia.
+- **Pulso:** permanece en la grilla; su presencia y ataque se suavizan en los
+  tramos de reposo. El bombo sólo participa si el usuario lo habilitó.
+- **Espacio:** la reverberación se contiene con más voces activas y se abre con
+  menor ocupación. Todos estos componentes pueden activarse por separado.
+
+### Cambios de timbre
+
+Se puede elegir **Conservar timbres**, **Por tramos**, **Aleatorios espaciados**
+o **Tramos + aleatorios**. Cada cambio se aplica al comienzo de la siguiente
+figura, con transición de dos segundos entre cadenas de audio. No salta patrones.
+La elección manual de un preset o la edición de síntesis suspende los cambios
+ automáticos de esa voz; su casilla permite retomarlos. Las ediciones de síntesis
+se conservan al detener y volver a iniciar dentro de la misma página.
+
+El recorrido inicial es editable:
+
+| Patrones | Etapa | Cuerdas | Percusión | Melodía |
+|---|---|---|---|---|
+| 1–6 | Apertura | Flauta | Vangelis | Moroder |
+| 7–15 | Primer desarrollo | Arco | Pizzicato | Space Lady |
+| 16–24 | Meseta | Flauta | Vangelis | Theremin |
+| 25–30 | Despeje | Flauta | Pizzicato | Space Lady |
+| 31–40 | Segundo desarrollo | Arco | Campana | Moroder |
+| 41–47 | Plenitud | Vocoder | Gamelan | Moroder |
+| 48–53 | Resolución | Flauta | Vangelis | Theremin |
+
+Cada voz sigue su propio patrón para cambiar timbre; el avance medio determina
+la etapa expresiva del conjunto. La permanencia mínima inicial es de 120 segundos,
+por lo que un cambio de tramo puede esperar. El azar usa una secuencia independiente
+y elige dentro de la paleta configurada para cada voz, sin repetir el timbre actual.
+La espera aleatoria media inicial es de cinco minutos, limitada además por la
+permanencia mínima. Los descansos y cambios sólo se ejecutan en límites de figura.
+
+### Coda e instalación
+
+Con evolución expresiva activa, cada voz espera en el patrón 53 hasta que lleguen
+las demás. Después se realiza una coda común de 36 segundos. Puede finalizar allí
+o dejar 20 segundos de reposo y comenzar un nuevo ciclo. Ambos tiempos son editables.
+El nuevo ciclo limpia la memoria de sala y de exposición; conserva controles y
+selecciones manuales. La IA existente conserva su aprendizaje durante la página.
+La coda se refiere al ensamble autónomo: el sintetizador acompañante conserva su
+control independiente; **SOLTAR** libera sus notas.
+
+Los registros incluyen el estado expresivo. El backup periódico continúa después
+de los 8.000 eventos retenidos; los anteriores se reemplazan como antes.
+
+### Verificación
+
+`npm test` ejecuta pruebas de lógica expresiva, una simulación de dos horas,
+integración del motor con un doble de audio y persistencia del registro. Cubre
+cambios por tramos/azar, límites de frase, protección manual, descansos, coda,
+reinicios y liberación de recursos. `npm run build` verifica la compilación.
+Las pruebas simuladas no sustituyen una escucha completa en el equipo de destino.
