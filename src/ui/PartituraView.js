@@ -227,7 +227,7 @@ export class PartituraView {
       const x = marginX + Math.min(N - 1, inst.posicion) * stepX;
       const y = topY + i * laneH;
       const ui = inst.getEstadoUI();
-      const b = inst.señal ? inst.getProbabilidadBreakdown() : ui.probBreakdown;
+      const b = ui.probBreakdown;
       pos[id] = { id, inst, ui, b, x, y, row: i };
     }
     return pos;

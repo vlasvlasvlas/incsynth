@@ -886,3 +886,21 @@ En `main.js`, después de crear ambos sliders, se agrega `syncPresion()`:
 - Si `GESTO > 0.02` → opacity normal, sin tooltip
 
 Se dispara en cada `input` de GESTO y una vez al init para reflejar el valor inicial.
+
+---
+
+## 2026-08-01 — Limpieza de controles por canal: solo BRILLO y VOL
+
+Se eliminaron los sliders por canal que no tenían efecto real en la síntesis o no estaban conectados funcionalmente:
+- **PRESIÓN** (`_manualSignal`) — eliminado
+- **GESTO** (`_manualBlend`) — eliminado  
+- **PASO** (`_advanceBias`) — eliminado
+- **APERTURA** (`_manualMuta`) — eliminado
+- **GLIDE** (`_glideTime`) — eliminado
+
+Se conservan únicamente:
+- **BRILLO** (`_brilloGain`) — intensidad visual / ganancia de brillo
+- **VOL** (`_volumenDb`) — volumen por canal
+
+También se eliminó la lógica `syncPresion` que dependía de GESTO/PRESIÓN.
+Cambio en `src/main.js`.

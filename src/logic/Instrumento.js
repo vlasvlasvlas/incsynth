@@ -134,6 +134,14 @@ export class Instrumento {
     return avanzo;
   }
 
+  registrarEspera(motivo) {
+    this._probBreakdown = { ...this._probBreakdown, p: 0, motivo };
+    this._lastDecision = motivo === 'coda' ? 'ESPERA: cierre compartido' : 'DESCANSA: respira una frase';
+    this._lastPayload = this.señal?.payloadText || '';
+    this.sala.actualizarPosicion(this.id, this.posicion, false);
+    cuartoMusico.registrarCiclo(this.id, this, this.sala, false);
+  }
+
   forzarAvance(motivo = 'empuje del convocante') {
     if (this.posicion >= this.sala.numPatrones - 1) return false;
     this.posicion++;
@@ -248,6 +256,7 @@ export class Instrumento {
 
   getEstadoUI() {
     return {
+      expression:    this._expression || null,
       estado:        this.estado,
       posicion:      this.posicion,
       señal:         this.señal?.magnitud ?? 0,
