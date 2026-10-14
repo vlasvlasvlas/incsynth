@@ -21,10 +21,6 @@
         <input type="range" id="master-vol" min="-40" max="0" step="1" value="-6" class="master-vol-slider">
         <span class="meta-label" id="master-vol-num">-6 dB</span>
       </div>
-      <div class="view-toggle" id="view-toggle" title="Cambiar modo de vista">
-        <button class="view-btn" data-view="circle">CÍRCULO</button>
-        <button class="view-btn active" data-view="partitura">PARTITURA</button>
-      </div>
       <button id="btn-theme" class="btn-icon" title="Modo Oscuro/Claro">☾</button>
       <button id="btn-about" class="btn-icon" title="Sobre este proyecto">?</button>
       <button id="btn-sidebar" class="btn-icon" title="Configuración">⚙</button>
@@ -33,8 +29,16 @@
   </header>
 
   <main id="main-view">
-    <div id="circle-container"></div>
     <section id="pattern-reader" aria-label="Figuras de los intérpretes"></section>
+    <section class="ensemble-map" aria-label="Relaciones del conjunto">
+      <div class="map-heading"><div><strong>El conjunto</strong><span>Encuentros y distancia entre las voces</span></div>
+      <div class="view-toggle" id="view-toggle" title="Cambiar modo de vista">
+        <button class="view-btn" data-view="circle">CÍRCULO</button>
+        <button class="view-btn active" data-view="partitura">RECORRIDO</button>
+      </div>
+      </div>
+      <div id="circle-container"></div>
+    </section>
   </main>
 
   <aside id="sidebar">

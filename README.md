@@ -6,11 +6,16 @@
 
 ## Lectura musical y ejecución
 
-Las tres fichas de **Lectura rítmica** muestran el motivo de cada intérprete.
-Un clic amplía el motivo y sus notas, silencios y duraciones sin modificar el
-sonido. La vista sigue la figura en ejecución y el reloj de audio; antes de
-reproducir es una vista previa estática. Los pedidos de avance esperan al final
-de la figura y no se acumulan para saltarse varias.
+Las tres voces ocupan filas con **pentagramas siempre visibles**, nombres de notas
+opcionales y resaltado del evento en ejecución. El encabezado de cada voz muestra
+la figura actual y la nota o silencio que está ejecutando. Las figuras largas se
+desplazan horizontalmente siguiendo la ejecución.
+
+Un clic en **Explorar figura** abre el detalle temporal con notas, silencios y
+duraciones: al costado en escritorio y debajo en pantallas pequeñas. El mapa de
+relaciones queda debajo de las voces y los controles de fuentes y síntesis en el
+panel desplegable. Abrir el detalle no cambia el sonido. Los pedidos de avance
+esperan al final de la figura y no se acumulan para saltarse varias.
 
 El modelo musical conserva las duraciones en unidades musicales, admite
 silencios, fracciones de negra (`beats: [numerador, denominador]`), ligaduras
