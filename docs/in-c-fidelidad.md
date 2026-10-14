@@ -32,11 +32,11 @@ La identidad de la obra combina material escrito preciso y libertad de interpret
 
 ## 2. Cómo se muestra lo que toca cada intérprete
 
-Se agregó una ficha por intérprete con la figura actual y una miniatura de su contorno y ritmo. Al hacer clic se abre una lectura ampliada: nombre de nota y octava, duración, silencios, adornos y continuidad de ligaduras. El resaltado sigue el evento que está ejecutando el motor en el reloj de audio, no el próximo evento que el planificador ya preparó.
+La interfaz prioriza tres filas, una por intérprete, con pentagramas siempre visibles y nombres de notas opcionales. Cada fila muestra figura, estado y nota actual. Al explorar una voz se abre el detalle temporal al costado en escritorio, o debajo en móvil. Así se conserva la lectura del conjunto. El mapa de relaciones aparece debajo; las fuentes y la síntesis permanecen en el panel desplegable.
 
-La figura completa sigue visible; el detalle largo se puede desplazar. Abrir y cerrar es una consulta, sin avanzar ni cambiar el sonido. Se distinguen vista previa detenida, espera, ejecución, silencio escrito y descanso de frase. El color conserva la identidad del instrumento.
+La notación se dibuja desde los mismos eventos cotejados que usa el motor: alturas diatónicas, octavas, alteraciones y becuadros de cancelación, valores escritos, silencios, adornos y ligaduras. Es una representación simplificada, con banderas individuales en lugar de las agrupaciones manuscritas del PDF; no es un facsímil de la edición. Los adornos mantienen su nota principal escrita aunque su realización le reste una pequeña duración.
 
-Es una **lectura rítmica con barras**, no una reproducción de la notación manuscrita ni un pentagrama. Esta elección ayuda a quien no lee música: altura vertical representa registro y ancho representa duración. Un futuro pentagrama sería útil para cotejar visualmente la edición, pero no es necesario para identificar notas y eventos en esta vista. La audibilidad también depende del volumen, envolventes y efectos: el resaltado indica ejecución, no una medición de la señal acústica.
+El detalle conserva la lectura con barras para entender la duración efectiva. El resaltado sigue el reloj de audio, no la preparación anticipada del planificador. Las figuras largas tienen desplazamiento horizontal y seguimiento del evento actual. Se distinguen vista previa detenida, espera, ejecución, silencio escrito y descanso de frase. La audibilidad también depende de volumen, envolventes y efectos; el resaltado no mide la señal acústica.
 
 ## 3. Control de las figuras y decisiones interpretativas
 
@@ -59,7 +59,7 @@ Puntos especialmente comprobados:
 
 ## Validación
 
-Resultado de esta revisión: **34 pruebas aprobadas**, compilación de producción correcta y comprobación visual del lector en ejecución y detenido. La compilación advierte del tamaño de algunos paquetes, sin impedir la generación.
+Resultado de esta revisión: **37 pruebas aprobadas**, compilación de producción correcta y comprobación visual del lector en ejecución y detenido. La compilación advierte del tamaño de algunos paquetes, sin impedir la generación.
 
 Las pruebas automáticas verifican la programación de silencios, adornos y ligaduras, el avance al terminar una figura, la correspondencia del lector con el reloj de audio y la integridad de las 53 figuras cotejadas. Las pruebas del repertorio incluyen puntos de control concretos y el registro de cada figura. La compilación de producción también se verifica.
 

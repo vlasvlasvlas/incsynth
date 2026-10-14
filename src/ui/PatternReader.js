@@ -1,5 +1,6 @@
 import { compilePattern, noteName as scoreNoteName, noteMidi, SCORE_STATUS } from '../audio/score.js';
 import './pattern-reader.css';
+import { notationLayout } from './notation.js';
 
 const READER_PPQ = 192;
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -33,6 +34,9 @@ function durationName(source, event) {
     const base = value.replace(/\.$/, '');
     if (DURATIONS[base]) return `${DURATIONS[base]}${value.endsWith('.') ? ' con puntillo' : ''} · ${timing}`;
   }
+  if (source?.grace?.length && event.kind !== 'grace' && DURATIONS[value?.replace(/\.$/, '')]) {
+    return `${DURATIONS[value.replace(/\.$/, '')]} con adorno · ${timing} de nota principal`;
+  }
   return timing;
 }
 
@@ -49,29 +53,48 @@ export class PatternReader {
     this.detailKey = null;
     container.classList.add('pattern-reader');
     const heading = element('div', 'pr-heading');
-    heading.append(element('strong', '', 'Lectura rítmica'), element('span', 'pr-verification', SCORE_STATUS.label));
+    const intro = element('div');
+    intro.append(element('span', 'pr-eyebrow', 'ESCUCHAR LA PARTITURA'), element('h2', '', 'Tres voces, un mismo pulso'), element('p', 'pr-intro', 'Cada voz repite su figura y avanza a su tiempo. Seguí las notas mientras se encuentran.'));
+    const tools = element('div', 'pr-tools');
+    const names = element('button', 'pr-names-toggle', 'Nombres de notas');
+    names.type = 'button';
+    names.setAttribute('aria-pressed', 'true');
+    names.addEventListener('click', () => {
+      const hidden = container.classList.toggle('pr-hide-names');
+      names.setAttribute('aria-pressed', String(!hidden));
+    });
+    const source = element('span', 'pr-verification', '53 figuras · partitura cotejada');
+    source.title = SCORE_STATUS.label;
+    tools.append(names, source);
+    heading.append(intro, tools);
     this.grid = element('div', 'pr-cards');
     container.append(heading, this.grid);
     for (const [id, inst] of Object.entries(instrumentos)) {
+      const row = element('article', 'pr-voice');
       const button = element('button', 'pr-card');
       button.type = 'button';
-      if (inst._colorHex) button.style.setProperty('--voice-color', inst._colorHex);
+      if (inst._colorHex) row.style.setProperty('--voice-color', inst._colorHex);
       button.setAttribute('aria-expanded', 'false');
       button.setAttribute('aria-controls', 'pattern-reader-detail');
       const name = element('strong', 'pr-name', inst._nombre || id);
       const position = element('span', 'pr-position');
       const status = element('span', 'pr-status');
-      const graphic = element('span', 'pr-mini');
+      const graphic = element('div', 'pr-mini');
+      graphic.tabIndex = 0;
+      graphic.setAttribute('aria-label', `Partitura de ${inst._nombre || id}; desplazar para ver figuras largas`);
+      const current = element('span', 'pr-now');
       const top = element('span', 'pr-card-top');
       top.append(name, position);
-      button.append(top, graphic, status);
+      button.append(top, status, current, element('span', 'pr-open', 'Explorar figura ↗'));
+      row.append(button, graphic);
       button.addEventListener('click', () => this.select(this.selected === id ? null : id));
-      this.grid.append(button);
-      this.cards.set(id, { button, position, status, graphic, patternIndex: null, drawing: null });
+      this.grid.append(row);
+      this.cards.set(id, { button, position, status, graphic, current, patternIndex: null, drawing: null });
     }
     this.detail = element('section', 'pr-detail');
     this.detail.id = 'pattern-reader-detail';
     this.detail.hidden = true;
+    this.detail.setAttribute('tabindex', '-1');
     this.detail.setAttribute('aria-label', 'Detalle de la figura en ejecución');
     const detailTop = element('div', 'pr-detail-top');
     this.detailTitle = element('strong');
@@ -84,7 +107,7 @@ export class PatternReader {
     this.scroller.tabIndex = 0;
     this.scroller.setAttribute('aria-label', 'Figura completa; desplazar horizontalmente para explorar');
     this.eventList = element('ol', 'pr-event-list');
-    this.detail.append(detailTop, element('p', 'pr-help', 'Más arriba = más agudo · más largo = mayor duración · 1 pulso = negra. Las notas ligadas continúan sin un nuevo ataque. El resaltado sigue la ejecución; el volumen y los efectos pueden cambiar lo que se oye.'), this.detailStatus, this.scroller, this.eventList);
+    this.detail.append(detailTop, element('p', 'pr-help', 'Tiempo de la figura: el ancho indica la duración. Las ligaduras sostienen la nota sin volver a atacarla. Un pulso equivale a una negra.'), this.detailStatus, this.scroller, this.eventList);
     container.append(this.detail);
     this.onKeydown = event => {
       if (event.key === 'Escape' && this.selected && container.contains(document.activeElement)) {
@@ -100,8 +123,13 @@ export class PatternReader {
     this.selected = id;
     this.detailKey = null;
     this.detail.hidden = !id;
+    this.container.classList.toggle('pr-expanded', !!id);
     for (const [key, card] of this.cards) card.button.setAttribute('aria-expanded', String(key === id));
     this.update();
+    if (id) {
+      this.detail.focus({ preventScroll: true });
+      if (window.matchMedia('(max-width:1000px)').matches) this.detail.scrollIntoView({block:'nearest',behavior:'smooth'});
+    }
   }
 
   close() {
@@ -144,6 +172,54 @@ export class PatternReader {
     return { svg, marks, cursor, width, padding };
   }
 
+  drawStaff(index) {
+    const events = notationLayout(this.patrones[index], this.score(index));
+    const width = Math.max(360, events.at(-1).x + events.at(-1).width + 20);
+    const svg = svgElement('svg', { viewBox: `0 0 ${width} 150`, role: 'img', class: 'pr-staff', preserveAspectRatio: 'xMinYMid meet' });
+    svg.style.width = `${width}px`;
+    svg.setAttribute('aria-label', `Figura ${index + 1}: ${events.map(noteName).join(', ')}`);
+    const line = (parent, x1, y1, x2, y2, cls = 'pr-staff-line') => parent.append(svgElement('line', {x1,y1,x2,y2,class:cls}));
+    for (let y=52; y<=92; y+=10) line(svg, 12,y,width-12,y);
+    const clef=svgElement('text',{x:14,y:91,class:'pr-clef'}); clef.textContent='𝄞'; svg.append(clef);
+    const marks=[];
+    for (const ev of events) {
+      const g=svgElement('g',{class:'pr-symbol'});
+      const {x,y,denominator:d}=ev;
+      const halo=svgElement('rect',{x:x-18,y:8,width:ev.width-4,height:132,rx:8,class:'pr-note-halo'});g.append(halo);
+      if (ev.note) {
+        for (let ly=102; ly<=y; ly+=10) line(g,x-11,ly,x+11,ly,'pr-ledger');
+        for (let ly=42; ly>=y; ly-=10) line(g,x-11,ly,x+11,ly,'pr-ledger');
+        const accidental=ev.accidental;
+        // Explicit accidentals on each affected note avoid ambiguous carry rules.
+        if(accidental) { const a=svgElement('text',{x:x-22,y:y+5,class:'pr-accidental'}); a.textContent=accidental;g.append(a); }
+        g.append(svgElement('ellipse',{cx:x,cy:y,rx:ev.grace?4:6,ry:ev.grace?3:4,transform:`rotate(-20 ${x} ${y})`,class:d<=2?'pr-head pr-open-head':'pr-head'}));
+        if(d>1) {
+          const up=y>=72; const stemX=x+(up?5:-5), tip=y+(up?-28:28);
+          line(g,stemX,y,stemX,tip,'pr-stem');
+          for(let f=0; f<Math.max(0,Math.log2(d)-2); f++) {
+            const fy=tip+(up?f*6:-f*6);
+            g.append(svgElement('path',{d:`M ${stemX} ${fy} q ${up?15:-15} ${up?6:-6} ${up?5:-5} ${up?17:-17}`,class:'pr-flag'}));
+          }
+          if(ev.grace) line(g,stemX-5,tip+13,stemX+8,tip+4,'pr-stem');
+        }
+        if(ev.dotted) g.append(svgElement('circle',{cx:x+13,cy:y%10===2?y-4:y,r:2,class:'pr-head'}));
+        if(ev.kind==='tie') {
+          const prev=events[ev.index-1];
+          g.append(svgElement('path',{d:`M ${prev.x+7} ${Math.max(y,prev.y)+12} Q ${(prev.x+x)/2} ${Math.max(y,prev.y)+25} ${x-7} ${y+12}`,class:'pr-tie-arc'}));
+        }
+      } else {
+        const rest=svgElement('text',{x:x-7,y:82,class:'pr-rest-symbol'});
+        rest.textContent=({1:'𝄻',2:'𝄼',4:'𝄽',8:'𝄾',16:'𝄿'})[d] || '𝄽';g.append(rest);
+        if(ev.dotted) g.append(svgElement('circle',{cx:x+12,cy:72,r:2,class:'pr-head'}));
+      }
+      const label=svgElement('text',{x,y:128,class:'pr-note-label','text-anchor':'middle'});
+      label.textContent=ev.note?scoreNoteName(ev.note):'sil.';g.append(label);
+      const title=svgElement('title',{});title.textContent=`${noteName(ev)} · ${durationName(this.patrones[index][ev.sourceIndex],ev)}`;g.append(title);
+      svg.append(g);marks.push({el:g,index:ev.index,isRest:!ev.note});
+    }
+    return {svg,marks,events,staff:true};
+  }
+
   paint(drawing, state) {
     if (!drawing) return;
     const live = state.running && state.phase === 'playing';
@@ -152,6 +228,7 @@ export class PatternReader {
       mark.el.classList.toggle('pr-current', active);
       mark.el.classList.toggle('pr-attack', active && !mark.isRest && ['note', 'grace'].includes(state.kind));
     }
+    if (drawing.staff) return;
     drawing.cursor.setAttribute('visibility', live ? 'visible' : 'hidden');
     const x = drawing.padding + Math.max(0, Math.min(1, state.progress || 0)) * (drawing.width - drawing.padding * 2);
     drawing.cursor.setAttribute('x1', String(x));
@@ -166,15 +243,23 @@ export class PatternReader {
       // A static preview is explicitly labelled; it never pretends to be playing.
       const index = actual ? state.patternIndex : Math.max(0, Math.min(this.patrones.length - 1, this.instrumentos[id].posicion || 0));
       const status = state.phase === 'suspended' ? PHASES.suspended : state.running ? (state.kind === 'rest' && state.phase === 'playing' ? 'Silencio escrito' : PHASES[state.phase] || 'Esperando') : state.phase === 'ended' ? 'Finalizado' : 'Detenido · vista previa';
-      card.position.textContent = `${index + 1}/${this.patrones.length}`;
+      card.position.textContent = `Figura ${String(index + 1).padStart(2, '0')}`;
+      card.current.textContent = state.running && state.phase === 'playing' ? (state.note ? scoreNoteName(state.note) + (state.kind === 'tie' ? ' · ligada' : state.kind === 'grace' ? ' · adorno' : '') : 'Silencio') : '—';
       card.status.textContent = status;
       card.button.setAttribute('aria-label', `${this.instrumentos[id]._nombre || id}, figura ${index + 1}, ${status}. Ver lectura rítmica`);
       if (card.patternIndex !== index) {
         card.patternIndex = index;
-        card.drawing = this.draw(index, false);
+        card.drawing = this.drawStaff(index);
         card.graphic.replaceChildren(card.drawing.svg);
       }
       this.paint(card.drawing, state);
+      if (state.running && state.phase === 'playing' && card.lastEvent !== state.eventIndex) {
+        const event = card.drawing.events[state.eventIndex];
+        if (event && (event.x < card.graphic.scrollLeft + 30 || event.x > card.graphic.scrollLeft + card.graphic.clientWidth - 40)) {
+          card.graphic.scrollLeft = Math.max(0, event.x - card.graphic.clientWidth / 3);
+        }
+      }
+      card.lastEvent = state.eventIndex;
       if (this.selected !== id) continue;
       const key = `${id}:${index}`;
       if (this.detailKey !== key) {
