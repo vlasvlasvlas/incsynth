@@ -26,6 +26,7 @@ import * as cuartoMusico from './ai/cuartoMusico.js';
 import { buildCuartoMusicoCard } from './ui/cuartoMusicoControl.js';
 import { Expression } from './audio/Expression.js';
 import { buildExpressionCard } from './ui/expressionControl.js';
+import { PatternReader } from './ui/PatternReader.js';
 
 const SOURCE_EXPLAINERS = {
   clima: {
@@ -179,6 +180,9 @@ async function init() {
 
   // ── Panel de control en sidebar ──
   let engine = null;
+  const patternReader = new PatternReader(document.getElementById('pattern-reader'), instrumentos, patrones, () => engine);
+  const mapResize = new ResizeObserver(() => views[currentViewId]?._resize());
+  mapResize.observe(mainContainer);
   const expression = new Expression(instIds);
   const primaryEl     = document.getElementById('panel-primary');
   const tableroEl     = document.getElementById('panel-tablero');
@@ -187,12 +191,12 @@ async function init() {
   const updateSalaPanel = buildSalaPanel(salaPanelRoot, instIds, instrumentos, sala);
 
   primaryEl.appendChild(buildIntervencionCard(instrumentos, {
-    onAdvance: id => instrumentos[id]?.forzarAvance('empuje del convocante') ?? false,
+    onAdvance: id => engine?.requestAdvance(id) ?? false,
     onAdvanceRandom: () => {
-      const candidates = instIds.filter(id => instrumentos[id].posicion < sala.numPatrones - 1);
+      const candidates = instIds.filter(id => engine?._running && instrumentos[id].posicion < sala.numPatrones - 1);
       if (!candidates.length) return null;
       const id = candidates[Math.floor(Math.random() * candidates.length)];
-      instrumentos[id].forzarAvance('azar dirigido');
+      if (!engine.requestAdvance(id)) return null;
       return { id, label: instrumentos[id]._nombre || id };
     },
     onRedistributeAndPush: () => {
@@ -200,7 +204,7 @@ async function init() {
       instIds.forEach((id, index) => {
         const fid = sourcePool[index % sourcePool.length];
         setInstrumentSource(id, fid);
-        instrumentos[id].forzarAvance('cambio de escucha');
+        engine?.requestAdvance(id);
       });
       return `nueva escucha: ${instIds.map(id => `${instrumentos[id]._nombre}←${instrumentos[id]._fuenteId}`).join(' · ')}`;
     },
@@ -376,6 +380,7 @@ async function init() {
     if (views[currentViewId]) {
       views[currentViewId].render(instrumentos, sala);
     }
+    patternReader.update();
     requestAnimationFrame(loop);
   });
 }

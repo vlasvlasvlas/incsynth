@@ -1,5 +1,30 @@
 # In C / Mundo Real
 
+> **Estado del repertorio:** las 53 figuras fueron retranscritas y cotejadas visualmente
+> en dos pasadas con la página 1 del PDF aportado por el usuario. Fuente, alcance,
+> diferencias y límites: [auditoría de fidelidad](docs/in-c-fidelidad.md).
+
+## Lectura musical y ejecución
+
+Las tres fichas de **Lectura rítmica** muestran el motivo de cada intérprete.
+Un clic amplía el motivo y sus notas, silencios y duraciones sin modificar el
+sonido. La vista sigue la figura en ejecución y el reloj de audio; antes de
+reproducir es una vista previa estática. Los pedidos de avance esperan al final
+de la figura y no se acumulan para saltarse varias.
+
+El modelo musical conserva las duraciones en unidades musicales, admite
+silencios, fracciones de negra (`beats: [numerador, denominador]`), ligaduras
+(`tieToNext: true`) y adornos (`grace: [{ nota: 'D4' }]`). Una ligadura requiere
+la misma altura siguiente y produce un solo ataque. Los adornos usan una
+convención explícita: toman aproximadamente el primer octavo del evento,
+repartido en ticks enteros, sin alargar la figura. Esta realización es una
+decisión interpretativa, no una duración atribuida al compositor.
+
+Apagar la evolución expresiva ya no omite notas aleatorias ni elimina el
+cierre compartido. Las pruebas del modelo y motor usan figuras sintéticas; las del repertorio
+protegen la transcripción cotejada contra cambios accidentales. Las pruebas
+automáticas no sustituyen la lectura de la partitura.
+
 **In C / Mundo Real** es una reinterpretación generativa y participativa de
 [*In C*](https://en.wikipedia.org/wiki/In_C), la obra abierta compuesta por
 Terry Riley en 1964.
@@ -23,7 +48,7 @@ manera completamente aislada.
 ## El principio original de In C
 
 La partitura original está formada por 53 figuras musicales breves dispuestas
-en un orden fijo. Los intérpretes comienzan juntos, pero cada uno puede repetir
+en un orden fijo. Los intérpretes comparten el pulso, y cada uno puede repetir
 una figura tantas veces como considere necesario antes de pasar a la siguiente.
 
 No hay un director que determine todos los avances. Cada músico debe:
@@ -149,7 +174,7 @@ Cada fuente de datos (clima, cripto, noticias) no toca una "nota" directamente, 
 
 - **ENTRA:** Autoriza la actividad del músico. Si la señal de entrada cae demasiado, el instrumento entra en estado "Descansando" y su volumen cae drásticamente.
 - **AVANZA:** Acumula la presión que le indica al músico que debe pasar al siguiente patrón de la partitura. Al ocurrir un avance, la posición cambia y se emite un "impacto" o *shockwave* que otros músicos pueden sentir.
-- **RETIENE:** Controla los "silencios voluntarios". Si esta señal es alta, el músico aumenta la probabilidad matemática de omitir (no tocar) determinadas notas dentro de su patrón repitente. Esto otorga al instrumento una respiración natural en lugar de sonar como un loop rígido de computadora.
+- **RETIENE:** Controla los "silencios voluntarios". Los descansos se realizan por figuras completas; el motor conserva todas las notas escritas de cada figura que interpreta.
 - **MUTA:** Interviene directamente en el sintetizador. Abre la frecuencia de corte (cutoff) del filtro paso bajo: valores altos de Muta hacen que el sonido del instrumento se vuelva drásticamente más brillante, afilado y agresivo, destacándolo armónicamente en la mezcla.
 - **SALE:** Reduce la presencia de la voz, llevándola al silencio o retirándola temporalmente del ensamble.
 
@@ -243,7 +268,7 @@ probabilidad bruta = puntaje de escucha × maduración temporal × variación de
 probabilidad final = cap_dinámico(probabilidad bruta)
 ```
 
-El límite o *cap dinámico* empieza en 65% (para asegurar fricción al inicio) y crece hacia el 90% a medida que el músico se acerca al patrón 53, favoreciendo una resolución más fluida hacia el clímax de la pieza. Adicionalmente, el sistema contempla **silencios voluntarios**: la señal de retención permite que los intérpretes omitan aleatoriamente la ejecución de algunas notas dentro de un patrón repitente, otorgándole a la pieza una respiración orgánica en lugar de una repetición rígida.
+El límite o *cap dinámico* empieza en 65% (para asegurar fricción al inicio) y crece hacia el 90% a medida que el músico se acerca al patrón 53, favoreciendo una resolución más fluida hacia el clímax de la pieza. Adicionalmente, el sistema contempla **silencios voluntarios** por figuras completas, sin suprimir notas aisladas de la partitura.
 
 Finalmente se realiza una decisión probabilística. Dos situaciones idénticas
 pueden producir respuestas distintas, pero nunca fuera de las restricciones de
@@ -620,7 +645,7 @@ permanencia mínima. Los descansos y cambios sólo se ejecutan en límites de fi
 
 ### Coda e instalación
 
-Con evolución expresiva activa, cada voz espera en el patrón 53 hasta que lleguen
+Cada voz espera en el patrón 53, incluso con la evolución expresiva desactivada, hasta que lleguen
 las demás. Después se realiza una coda común de 36 segundos. Puede finalizar allí
 o dejar 20 segundos de reposo y comenzar un nuevo ciclo. Ambos tiempos son editables.
 El nuevo ciclo limpia la memoria de sala y de exposición; conserva controles y

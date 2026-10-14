@@ -10,7 +10,7 @@ export function buildIntervencionCard(instrumentos, callbacks = {}) {
 
   const note = document.createElement('div');
   note.className = 'intervencion-note';
-  note.textContent = 'Intervenciones breves: alteran el recorrido sin reemplazar la escucha autónoma.';
+  note.textContent = 'Durante la reproducción, pedí avanzar al terminar la figura. Repetir el clic no salta figuras.';
   card.appendChild(note);
 
   const status = document.createElement('div');
@@ -27,8 +27,8 @@ export function buildIntervencionCard(instrumentos, callbacks = {}) {
     btn.addEventListener('click', () => {
       const moved = callbacks.onAdvance?.(id);
       status.textContent = moved === false
-        ? `${inst._nombre || id}: fin de recorrido`
-        : `${inst._nombre || id}: un patrón adelante`;
+        ? `${inst._nombre || id}: iniciá la reproducción o esperá el avance pendiente`
+        : `${inst._nombre || id}: avanzará al terminar la figura`;
     });
     grid.appendChild(btn);
   }
@@ -43,7 +43,7 @@ export function buildIntervencionCard(instrumentos, callbacks = {}) {
   randomBtn.addEventListener('click', () => {
     const result = callbacks.onAdvanceRandom?.();
     status.textContent = result?.label
-      ? `${result.label}: un patrón adelante`
+      ? `${result.label}: avanzará al terminar la figura`
       : 'ningún músico pudo avanzar';
   });
 
