@@ -23,8 +23,8 @@ export class PartituraView {
   _resize() {
     const dpr = window.devicePixelRatio || 1;
     const w = Math.max(320, this.container.offsetWidth || window.innerWidth);
-    const parentH = this.container.parentElement?.offsetHeight || window.innerHeight - 60;
-    const h = Math.max(360, parentH);
+    const parentH = this.container.offsetHeight || window.innerHeight - 60;
+    const h = Math.max(120, parentH);
     if (!w || !h) { setTimeout(() => this._resize(), 100); return; }
 
     this._W = w;
@@ -61,9 +61,9 @@ export class PartituraView {
       const N = sala.numPatrones;
       const compact = W < 600;
       const marginX = compact ? 88 : Math.max(96, Math.min(132, W * 0.1));
-      const topY = compact ? 96 : 118;
-      const bottomY = H - (compact ? 82 : 108);
-      const laneH = Math.max(compact ? 64 : 72, (bottomY - topY) / Math.max(1, this.ids.length - 1));
+      const topY = H < 360 ? 46 : compact ? 96 : 118;
+      const bottomY = H - (H < 360 ? 52 : compact ? 82 : 108);
+      const laneH = Math.max(24, (bottomY - topY) / Math.max(1, this.ids.length - 1));
       const graphW = W - marginX * 2;
       const stepX = graphW / Math.max(1, N - 1);
       const center = sala.getCentroMasa();

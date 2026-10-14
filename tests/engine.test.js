@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import { Expression } from '../src/audio/Expression.js';
+import { compilePattern } from '../src/audio/score.js';
 import { LaSala } from '../src/logic/LaSala.js';
 
 async function harness() {
@@ -16,7 +17,7 @@ async function harness() {
     constructor(config = {}) {
       this.config = config; this.volume = new Param(); this.frequency = new Param(8000);
       this.gain = new Param(typeof config === 'number' ? config : 1); this.wet = new Param();
-      this.attacks = []; this.disposed = false; nodes.push(this);
+      this.attacks = []; this.releases = []; this.disposed = false; nodes.push(this);
     }
     connect() { assert.equal(this.disposed, false); return this; }
     toDestination() { return this; }
@@ -24,24 +25,26 @@ async function harness() {
     generate() { return Promise.resolve(); }
     set(patch) { assert.equal(this.disposed, false); this.config = { ...this.config, ...patch }; }
     triggerAttackRelease(...args) { assert.equal(this.disposed, false); this.attacks.push(args); }
-    triggerRelease() {}
-    releaseAll() {}
+    triggerAttack(...args) { assert.equal(this.disposed, false); this.attacks.push(args); }
+    triggerRelease(time) { this.releases.push(time); }
+    releaseAll(time) { this.releases.push(time); }
     dispose() { this.disposed = true; }
   }
   const Transport = {
-    state: 'stopped', ticks: 0, position: 0, bpm: new Param(70),
+    state: 'stopped', ticks: 0, PPQ: 192, position: 0, getTicksAtTime() { return this.ticks; }, bpm: new Param(70),
     start() { this.state = 'started'; },
     scheduleOnce(callback, tick) { const id = ++idCounter; events.set(id, { callback, tick: parseInt(tick), repeat: false }); return id; },
     scheduleRepeat(callback) { const id = ++idCounter; events.set(id, { callback, repeat: true }); return id; },
     clear(id) { events.delete(id); },
     cancel() { throw new Error('Must not cancel another component’s events'); },
   };
-  const tone = { Transport, now: () => now, start: () => pendingStart || Promise.resolve(),
+  const audioContext = { state: 'running' };
+  const tone = { Transport, getContext: () => audioContext, now: () => now + 0.1, immediate: () => now, start: () => pendingStart || Promise.resolve(),
     Time: value => ({ toTicks: () => ({ '8n': 96, '16n': 48, '1m': 768, '4n': 192 }[value] || 96) }),
     Synth: Node, FMSynth: Node, AMSynth: Node, MembraneSynth: Node, PolySynth: Node,
     Reverb: Node, Filter: Node, Gain: Node, Chorus: Node, PingPongDelay: Node, AutoFilter: Node,
   };
-  const context = vm.createContext({ console, setTimeout, clearTimeout, structuredClone });
+  const context = vm.createContext({ console, setTimeout, clearTimeout, structuredClone, Math: Object.create(Math) });
   const moduleOf = obj => new vm.SyntheticModule(Object.keys(obj), function() {
     for (const [key,value] of Object.entries(obj)) this.setExport(key,value);
   }, { context });
@@ -54,7 +57,7 @@ async function harness() {
   const expression = moduleOf({ Expression });
   const engineModule = new vm.SourceTextModule(await readFile(new URL('../src/audio/Engine.js', import.meta.url), 'utf8'), { context });
   await engineModule.link(spec => ({ tone: toneModule, './Pulse.js': pulse, './presets.js': presets,
-    '../logic/StateMachine.js': states, '../ai/cuartoMusico.js': ai, './Expression.js': expression }[spec]));
+    '../logic/StateMachine.js': states, '../ai/cuartoMusico.js': ai, './Expression.js': expression, './score.js': moduleOf({ compilePattern }) }[spec]));
   await engineModule.evaluate();
   const sala = new LaSala(53);
   const instruments = {};
@@ -62,6 +65,7 @@ async function harness() {
     instruments[id] = { id, sala, posicion: 0, estado: 'SONANDO', _presetKey: 'FLAUTA', _volumenDb: -18,
       _verbos: {}, tick() {}, reiniciarMaduracion() {}, advances: 0,
       decidirAvance() { this.advances++; return false; },
+      forzarAvance() { this.posicion++; return true; },
       getEstadoUI() { return { estado: this.estado, muta: 0, audibilidad: 1 }; },
       getVolatilidadGlobal() { return 0; },
     };
@@ -71,10 +75,17 @@ async function harness() {
   const score = new Expression(Object.keys(instruments));
   score.settings.timbres = 'fijo'; score.settings.breaths = false;
   const engine = new Engine({instrumentos: instruments}, patterns, sala, instruments, null, score);
-  return { engine, score, instruments, nodes, events, Transport,
+  return { engine, score, instruments, nodes, events, Transport, audioContext,
+    setRandom(value) { context.Math.random = () => value; },
+    setClock(tick, time = tick / 192) { now = time; Transport.ticks = tick; },
+    runAhead(tick, time = tick / 192) {
+      for (const [id, event] of [...events]) {
+        if (!event.repeat && event.tick === tick) { events.delete(id); event.callback(time); }
+      }
+    },
     pending() { let resolve; pendingStart = new Promise(r => { resolve = r; }); return resolve; },
-    runTick(tick) {
-      now = tick / 192; Transport.ticks = tick;
+    runTick(tick, time = tick / 192) {
+      now = time; Transport.ticks = tick;
       for (const [id, event] of [...events]) {
         if (!event.repeat && event.tick === tick) { events.delete(id); event.callback(now); }
       }
@@ -118,6 +129,9 @@ test('a phrase rest schedules the next boundary without notes or autonomous adva
   h.score.voices.cuerdas.restUntil = 20;
   h.runTick(0);
   assert.equal(h.engine.synths.cuerdas.attacks.length, 0);
+  assert.equal(h.engine.getPlaybackState('cuerdas').phase, 'resting');
+  assert.equal(h.engine.getPlaybackState('cuerdas').eventIndex, null);
+  assert.equal(h.engine.getPlaybackState('cuerdas').kind, null);
   h.runTick(96);
   assert.equal(h.instruments.cuerdas.advances, 0);
   assert.ok(h.events.size > 0);
@@ -173,5 +187,136 @@ test('changing synth type queues edits coherently and preserves them for restart
   h.runTick(96);
   assert.equal(h.instruments.cuerdas._customPreset.tipo,'FMSynth');
   assert.equal(h.instruments.cuerdas._customPreset.config.envelope.release,2.3);
+  h.engine.dispose();
+});
+
+test('tied notes attack once and release at their musical endpoint after a tempo change', async () => {
+  const h = await harness();
+  h.engine.patrones[0] = [
+    { nota: 'D4', beats: [1, 1], tieToNext: true },
+    { nota: 'D4', beats: [1, 1] },
+    { nota: null, beats: [1, 2] },
+  ];
+  await h.engine.start(); h.runTick(0);
+  const voice = h.engine.synths.cuerdas;
+  assert.equal(voice.attacks.length, 1);
+  assert.ok([...h.events.values()].some(event => event.tick === 384));
+  h.engine.setBPM(40);
+  h.setClock(240, 2);
+  const state = h.engine.getPlaybackState('cuerdas');
+  assert.equal(state.kind, 'tie'); assert.equal(state.eventIndex, 1);
+  assert.equal(voice.releases.length, 0);
+  h.runTick(384, 3);
+  assert.equal(voice.attacks.length, 1);
+  assert.deepEqual(voice.releases, [3]);
+  assert.equal(h.engine.getPlaybackState('cuerdas').phase, 'playing');
+  assert.equal(h.engine.getPlaybackState('cuerdas').kind, 'rest');
+  h.engine.dispose();
+});
+
+test('grace attacks share the principal duration and snapshots identify grace, note and rest', async () => {
+  const h = await harness();
+  h.engine.patrones[0] = [
+    { nota: 'D4', beats: [1, 1], grace: [{ nota: 'C4' }] },
+    { nota: null, beats: [1, 2] },
+    { nota: 'E4', beats: [1, 1] },
+  ];
+  await h.engine.start(); h.runTick(0);
+  const voice = h.engine.synths.cuerdas;
+  assert.equal(voice.attacks[0][0], 'C4');
+  h.setClock(12); let state = h.engine.getPlaybackState('cuerdas');
+  assert.equal(state.kind, 'grace'); assert.equal(state.eventProgress, 0.5);
+  h.runTick(24); state = h.engine.getPlaybackState('cuerdas');
+  assert.equal(voice.attacks[1][0], 'D4');
+  assert.equal(state.eventIndex, 1); assert.equal(state.sourceIndex, 0);
+  assert.equal(state.kind, 'note');
+  h.runTick(192); state = h.engine.getPlaybackState('cuerdas');
+  assert.equal(state.note, null); assert.equal(state.kind, 'rest');
+  h.runTick(288); assert.equal(voice.attacks[2][0], 'E4');
+  h.runTick(480); assert.equal(h.engine.getPlaybackState('cuerdas').cycle, 2);
+  h.engine.dispose();
+});
+
+test('manual advance is queued once and the visual state follows audio rather than lookahead', async () => {
+  const h = await harness();
+  assert.equal(h.engine.requestAdvance('cuerdas'), false);
+  await h.engine.start(); h.runTick(0); h.setClock(48);
+  assert.equal(h.engine.requestAdvance('cuerdas'), true);
+  assert.equal(h.engine.requestAdvance('cuerdas'), false);
+  assert.equal(h.instruments.cuerdas.posicion, 0);
+  assert.equal(h.engine.getPlaybackState('cuerdas').pendingPatternIndex, 1);
+  h.runAhead(96);
+  assert.equal(h.instruments.cuerdas.posicion, 1);
+  let state = h.engine.getPlaybackState('cuerdas');
+  assert.equal(state.patternIndex, 0); assert.equal(state.progress, 0.5);
+  assert.equal(state.pendingPatternIndex, 1);
+  assert.equal(h.engine.requestAdvance('cuerdas'), false);
+  h.setClock(96); state = h.engine.getPlaybackState('cuerdas');
+  assert.equal(state.patternIndex, 1); assert.equal(state.pendingPatternIndex, null);
+  assert.equal(state.progress, 0);
+  assert.equal(h.instruments.cuerdas.advances, 0);
+  h.engine.dispose();
+});
+
+test('expression off retains written notes and waits at the last figure', async () => {
+  const h = await harness(); h.score.settings.enabled = false; h.setRandom(0);
+  h.instruments.cuerdas.posicion = 52; h.instruments.cuerdas._verbos.RETIENE = 1;
+  h.engine.patrones[52] = Array.from({ length: 16 }, () => ({ nota: 'F4', duracion: '16n' }));
+  await h.engine.start();
+  for (let tick = 0; tick <= 768; tick += 48) h.runTick(tick);
+  assert.equal(h.engine.synths.cuerdas.attacks.length, 17);
+  assert.equal(h.instruments.cuerdas.advances, 0);
+  assert.equal(h.engine.getPlaybackState('cuerdas').patternIndex, 52);
+  assert.equal(h.engine.requestAdvance('cuerdas'), false);
+  h.engine.dispose();
+});
+
+test('future starts and endings do not move the snapshot ahead of the audio clock', async () => {
+  const h = await harness(); await h.engine.start(); h.runAhead(96);
+  assert.equal(h.engine.getPlaybackState('percusion').phase, 'waiting');
+  h.setClock(96);
+  assert.equal(h.engine.getPlaybackState('percusion').phase, 'playing');
+  h.engine.stop(1);
+  assert.equal(h.engine.getPlaybackState('percusion').running, true);
+  h.setClock(192, 1);
+  assert.equal(h.engine.getPlaybackState('percusion').phase, 'ended');
+  assert.equal(h.engine.getPlaybackState('percusion').patternIndex, 0);
+  h.engine.dispose();
+});
+
+test('stop cancels future note releases and releases retiring chains too', async () => {
+  const h = await harness(); await h.engine.start(); h.runTick(0);
+  const old = h.engine.synths.cuerdas;
+  h.engine.cambiarPreset('cuerdas', 'ARCO'); h.runTick(96);
+  const releases = old.releases.length;
+  h.engine.stop();
+  assert.equal(old.releases.length, releases + 1);
+  assert.equal(h.events.size, 0);
+  assert.equal(h.engine.getPlaybackState('cuerdas').phase, 'stopped');
+  h.engine.dispose();
+});
+
+test('suspended audio clears the current note instead of displaying it as sounding', async () => {
+  const h=await harness(); await h.engine.start(); h.runTick(0);
+  assert.equal(h.engine.getPlaybackState('cuerdas').phase,'playing');
+  h.audioContext.state='suspended';
+  const state=h.engine.getPlaybackState('cuerdas');
+  assert.equal(state.phase,'suspended');
+  assert.equal(state.eventIndex,null);
+  assert.equal(state.running,false);
+  h.engine.dispose();
+});
+
+test('natural end notification waits for the audible end before allowing disposal', async () => {
+  const h=await harness(); await h.engine.start();
+  let ended=0; h.engine.onEnded=()=>ended++;
+  h.engine._actualizarSintesis=()=>{};
+  h.score.ended=true; h.score.settings.ending='coda';
+  const pulse=[...h.events.values()].find(e=>e.repeat);
+  pulse.callback(0.02);
+  assert.equal(ended,0);
+  h.setClock(4,0.02);
+  await new Promise(resolve=>setTimeout(resolve,35));
+  assert.equal(ended,1);
   h.engine.dispose();
 });

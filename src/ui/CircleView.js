@@ -31,8 +31,8 @@ export class CircleView {
     const dpr = window.devicePixelRatio || 1;
     const w   = Math.max(320, this.container.offsetWidth || window.innerWidth);
     // Tomar la altura disponible del contenedor real
-    const parentH = this.container.parentElement?.offsetHeight || window.innerHeight - 60;
-    const h   = Math.max(360, parentH);
+    const parentH = this.container.offsetHeight || window.innerHeight - 60;
+    const h   = Math.max(120, parentH);
     if (!w || !h) { setTimeout(() => this._resize(), 100); return; }
 
     this._W = w; this._H = h;

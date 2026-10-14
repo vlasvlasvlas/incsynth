@@ -70,9 +70,9 @@ test('random changes are reproducible, spaced, within voice palette and do not c
   assert.deepEqual(run(), run());
 });
 
-test('disabled expression returns neutral sound and does not trigger rests, swaps or ending', () => {
+test('disabled expression returns neutral sound without rests or swaps', () => {
   const score = new Expression(ids); const inst = ensemble();
-  score.settings.enabled = false; ids.forEach(id => { inst[id].posicion = 52; });
+  score.settings.enabled = false;
   advance(score, inst, 1000);
   assert.equal(score.snapshot.pulseGain, 1);
   assert.equal(score.snapshot.reverb, null);
@@ -80,6 +80,20 @@ test('disabled expression returns neutral sound and does not trigger rests, swap
   assert.equal(score.snapshot.voices.cuerdas.releaseScale, 1);
   assert.deepEqual(score.phrase('cuerdas', inst, 'FLAUTA'), { rest: false, preset: null });
   assert.equal(score.ended, false);
+});
+
+test('disabling timbre expression cannot cancel the shared ending', () => {
+  const score = new Expression(ids); const inst = ensemble();
+  score.settings.enabled = false;
+  inst.cuerdas.posicion = 52; inst.percusion.posicion = 52;
+  advance(score, inst, 40); assert.equal(score.codaAt, null);
+  inst.melodia.posicion = 52;
+  advance(score, inst, 40);
+  assert.equal(score.ended, true);
+  assert.equal(score.snapshot.voices.cuerdas.codaGain, 0);
+  score.settings.enabled = true;
+  score.update(score.lastTime + 1, inst);
+  assert.equal(score.ended, true);
 });
 
 test('coda waits for all voices; installation rest precedes new cycle', () => {

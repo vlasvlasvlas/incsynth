@@ -69,11 +69,11 @@ export class Expression {
     const amount = enabled ? clamp(this.settings.amount, 0, 1) : 0;
     const positions = this.ids.map(id => instruments[id]?.posicion ?? 0);
     const stage = this.settings.stages[this.stageIndex(positions.reduce((a, b) => a + b, 0) / Math.max(1, positions.length))];
-    if (enabled && this.codaAt === null && positions.every(p => p >= lastPosition)) this.codaAt = this.elapsed;
-    if (!enabled) { this.codaAt = null; this.ended = false; }
+    // Ending belongs to the performance, independently of timbre automation.
+    if (this.codaAt === null && positions.every(p => p >= lastPosition)) this.codaAt = this.elapsed;
     const codaAge = this.codaAt === null ? 0 : this.elapsed - this.codaAt;
     const codaGain = this.codaAt === null ? 1 : clamp(1 - codaAge / this.settings.codaSeconds, 0, 1);
-    this.ended = enabled && this.codaAt !== null && codaGain === 0;
+    this.ended = this.codaAt !== null && codaGain === 0;
     const eligible = this.ids.filter(id => {
       const inst = instruments[id];
       return inst && !['DORMIDO', 'ARMADO', 'DESCANSANDO'].includes(inst.estado)

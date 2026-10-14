@@ -4,6 +4,7 @@ import { PRESETS, DEFAULTS } from './presets.js';
 import { ESTADOS } from '../logic/StateMachine.js';
 import * as cuartoMusico from '../ai/cuartoMusico.js';
 import { Expression } from './Expression.js';
+import { compilePattern } from './score.js';
 
 export class AudioEngine {
   constructor(config, patrones, sala, instrumentos, onCiclo, expression = null) {
@@ -24,6 +25,9 @@ export class AudioEngine {
     this._pendingPresets = {};
     this._disposed = false;
     this._startGeneration = 0;
+    this._playback = {};
+    this._pendingAdvances = {};
+    this._endedAt = null;
 
     // Reverb compartida contenida para mantener legible la grilla.
     this._reverb = new Tone.Reverb({ decay: 2.8, wet: 0.12 }).toDestination();
@@ -209,6 +213,9 @@ export class AudioEngine {
       await this._reverbReady; // asegurar que el impulse response esté listo
       if (this._disposed || generation !== this._startGeneration) return;
       this._running = true;
+      this._endedAt = null;
+      this._playback = {};
+      this._pendingAdvances = {};
       this.expression.pause();
       const originTick = Tone.Transport.state === 'started' ? Tone.Transport.ticks + this._notationToTicks('8n') : 0;
       if (Tone.Transport.state !== 'started') Tone.Transport.position = 0;
@@ -227,14 +234,18 @@ export class AudioEngine {
     } finally { this._starting = false; }
   }
 
-  stop() {
+  stop(endedAt = null) {
+    clearTimeout(this._endedTimer);
+    this._endedAt = endedAt;
+    this._pendingAdvances = {};
     this._running = false;
     ++this._startGeneration;
     this.expression.pause();
     for (const event of this._transportEvents) Tone.Transport.clear(event);
     for (const synth of Object.values(this.synths)) {
-      this._releaseSynth(synth, Tone.now());
+      this._releaseSynth(synth, endedAt ?? this._audioNow());
     }
+    for (const old of this._retiring) this._releaseSynth(old.synth, endedAt ?? this._audioNow());
     this._transportEvents.clear();
     this._patternEvents = {};
     this._pulseEvent = null;
@@ -248,8 +259,15 @@ export class AudioEngine {
       if (!this.expression.ended) this.sala.pulso();
       if (this.expression.shouldLoop()) this._newCycle();
       else if (this.expression.ended && this.expression.settings.ending === 'coda') {
-        this.stop();
-        this.onEnded?.();
+        this.stop(time);
+        const generation = this._startGeneration;
+        const notifyAtAudioEnd = () => {
+          if (this._disposed || generation !== this._startGeneration) return;
+          const remaining = time - this._audioNow();
+          if (remaining > 0) this._endedTimer = setTimeout(notifyAtAudioEnd, Math.max(10, remaining * 1000));
+          else this.onEnded?.();
+        };
+        notifyAtAudioEnd();
       }
     }, '8n', 0);
     this._transportEvents.add(this._pulseEvent);
@@ -343,9 +361,77 @@ export class AudioEngine {
     return Math.max(1, Math.round(Tone.Time(notation).toTicks()));
   }
 
-  _patternDurationTicks(patron) {
-    const ticks = patron.reduce((sum, event) => sum + this._notationToTicks(event.duracion), 0);
-    return Math.max(this._notationToTicks('16n'), ticks);
+  _compilePattern(pattern) {
+    return compilePattern(pattern, { ppq: Tone.Transport.PPQ ?? 192 });
+  }
+
+  _patternDurationTicks(pattern) {
+    return this._compilePattern(pattern).totalTicks;
+  }
+
+  _audioNow() {
+    return Tone.immediate?.() ?? Tone.getContext?.().currentTime ?? Tone.now();
+  }
+
+  // Scheduler callbacks run ahead of audible time. Read the transport at the
+  // audio clock, then select the ledger entry that has actually begun sounding.
+  getPlaybackState(id) {
+    const now = this._audioNow();
+    const running = this._running || (this._endedAt !== null && now < this._endedAt);
+    const ledger = this._playback[id] || [];
+    const entry = ledger.findLast(item => item.startTime <= now + 1e-7);
+    const pending = this._pendingAdvances[id] ?? ledger.find(item => item.startTime > now
+      && item.patternIndex !== entry?.patternIndex)?.patternIndex;
+    const base = {
+      running, phase: running ? 'waiting' : this._endedAt !== null ? 'ended' : 'stopped',
+      patternIndex: entry?.patternIndex ?? this.instrumentos[id]?.posicion ?? 0,
+      eventIndex: null, sourceIndex: null, cycle: entry?.cycle ?? 0,
+      progress: 0, eventProgress: 0, pendingPatternIndex: pending ?? null,
+      note: null, kind: null,
+    };
+    if (!entry) return base;
+    if (running && Tone.getContext?.().state === 'suspended') {
+      base.running = false;
+      base.phase = 'suspended';
+      return base;
+    }
+    const tick = Tone.Transport.getTicksAtTime?.(now) ?? Tone.Transport.ticks;
+    const elapsed = Math.max(0, tick - entry.startTick);
+    base.progress = Math.min(1, elapsed / (entry.endTick - entry.startTick));
+    if (!running) return base;
+    if (entry.waiting) return base;
+    const event = entry.events.findLast(ev => ev.onsetTicks <= elapsed + 1e-7);
+    base.phase = entry.silent ? 'resting' : 'playing';
+    if (entry.silent) return base;
+    if (event && elapsed < entry.endTick - entry.startTick) {
+      base.eventIndex = event.index;
+      base.sourceIndex = event.sourceIndex;
+      base.eventProgress = Math.min(1, (elapsed - event.onsetTicks) / event.durationTicks);
+      base.note = entry.silent ? null : event.note;
+      base.kind = event.kind;
+    }
+    return base;
+  }
+
+  requestAdvance(id) {
+    const inst = this.instrumentos[id];
+    if (!this._running || !inst || this._pendingAdvances[id] !== undefined
+      || inst.posicion >= this.patrones.length - 1) return false;
+    const audible = this.getPlaybackState(id);
+    // If the scheduler has already committed an upcoming change, let it sound
+    // before accepting another gesture. Repeated clicks cannot skip figures.
+    if (inst.posicion > audible.patternIndex) return false;
+    this._pendingAdvances[id] = inst.posicion + 1;
+    return true;
+  }
+
+  _recordPlayback(id, entry) {
+    const ledger = this._playback[id] ||= [];
+    const previous = ledger.at(-1);
+    ledger.push({ ...entry, cycle: (previous?.cycle ?? 0) + (entry.waiting ? 0 : 1) });
+    const now = this._audioNow();
+    // Keep the currently audible cycle and all lookahead cycles.
+    while (ledger.length > 2 && ledger[1].startTime <= now) ledger.shift();
   }
 
   _scheduleAtTick(tick, callback, ownerId = null) {
@@ -354,7 +440,7 @@ export class AudioEngine {
       this._transportEvents.delete(eventId);
       if (ownerId) this._patternEvents[ownerId]?.delete(eventId);
       if (this._running) callback(time);
-    }, `${Math.max(0, Math.round(tick))}i`);
+    }, `${Math.max(0, tick)}i`);
     this._transportEvents.add(eventId);
     if (ownerId) {
       this._patternEvents[ownerId] ||= new Set();
@@ -382,7 +468,9 @@ export class AudioEngine {
     }
     if (ui.estado === ESTADOS.DORMIDO || ui.estado === ESTADOS.ARMADO) {
       this.expression.markSounding(id, false);
-      this._schedulePatternCycle(id, startTick + this._notationToTicks('1m'));
+      const endTick = startTick + this._notationToTicks('1m');
+      this._recordPlayback(id, { patternIndex: inst.posicion, startTick, endTick, startTime, events: [], waiting: true });
+      this._schedulePatternCycle(id, endTick);
       return;
     }
     const phrase = this.expression.phrase(id, this.instrumentos, inst._presetKey, inst._autoTimbre !== false);
@@ -390,34 +478,34 @@ export class AudioEngine {
     this._applyPendingPreset(id);
     const silent = phrase.rest || this.expression.ended || ui.estado === ESTADOS.DESCANSANDO;
     this.expression.markSounding(id, !silent);
-    const patron = this.patrones[inst.posicion];
-    const durationTicks = this._patternDurationTicks(patron);
-    let offsetTicks = 0;
-
-    for (const ev of patron) {
-      // Expressive breathing preserves whole figures; legacy mode keeps note omissions.
-      const retiene = inst._verbos?.RETIENE ?? 0;
-      const skipChance = this.expression.settings.enabled ? 0 : retiene * 0.25;
-      const skip = Math.random() < skipChance;
-      if (ev.nota && !silent && !skip) {
-        const noteTick = startTick + offsetTicks;
-        const trigger = time => {
-          try {
-            this.synths[id]?.triggerAttackRelease(ev.nota, ev.duracion, time);
-          } catch (_) {}
-        };
-        if (offsetTicks === 0) trigger(startTime);
-        else this._scheduleAtTick(noteTick, trigger, id);
-      }
-      offsetTicks += this._notationToTicks(ev.duracion);
+    const patternIndex = inst.posicion;
+    const compiled = this._compilePattern(this.patrones[patternIndex]);
+    const durationTicks = compiled.totalTicks;
+    this._recordPlayback(id, { patternIndex, startTick, endTick: startTick + durationTicks,
+      startTime, events: compiled.events, silent });
+    const synth = this.synths[id];
+    for (const event of compiled.events) {
+      if (silent || !event.note || event.attackDurationTicks <= 0) continue;
+      const attack = time => synth.triggerAttack(event.note, time);
+      if (event.onsetTicks === 0) attack(startTime);
+      else this._scheduleAtTick(startTick + event.onsetTicks, attack, id);
+      // Release is a transport event, not a duration frozen into seconds at
+      // attack time. Ties have one attack and retain their release under BPM changes.
+      this._scheduleAtTick(startTick + event.onsetTicks + event.attackDurationTicks,
+        time => this._releaseSynth(synth, time), id);
     }
 
     const finishTick = startTick + durationTicks;
     this._scheduleAtTick(finishTick, finishTime => {
       if (inst.posicion >= this.patrones.length) return;
       // At 53 the voice waits for its partners, then all fade through the coda.
-      const waiting = this.expression.settings.enabled && inst.posicion === this.patrones.length - 1;
-      const avanzo = waiting || phrase.rest ? false : inst.decidirAvance();
+      const waiting = inst.posicion === this.patrones.length - 1;
+      const requested = this._pendingAdvances[id];
+      delete this._pendingAdvances[id];
+      let avanzo = false;
+      if (!waiting && requested !== undefined) {
+        avanzo = inst.forzarAvance('gesto al terminar la figura');
+      } else if (!waiting && !phrase.rest) avanzo = inst.decidirAvance();
       if (waiting || phrase.rest) inst.registrarEspera?.(waiting ? 'coda' : 'respiracion');
       if (this.onCiclo) this.onCiclo(id, inst.posicion, avanzo, inst.getEstadoUI());
       // El siguiente ciclo hereda el timestamp exacto del límite anterior.
@@ -430,6 +518,7 @@ export class AudioEngine {
       for (const event of this._patternEvents[id]) { Tone.Transport.clear(event); this._transportEvents.delete(event); }
     }
     this._patternEvents = {};
+    this._pendingAdvances = {};
     Object.assign(this.sala, new this.sala.constructor(this.patrones.length));
     this.expression.reset();
     let index = 0;
