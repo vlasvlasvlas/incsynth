@@ -950,7 +950,7 @@ function makePanelRange(label, min, max, step, initial, format, onInput) {
 // ── Instrumentos: señal, luz y sonido ──
 function buildSonidoCard(instIds, instConfig, instrumentos, getEngine) {
   const card = document.createElement('div'); card.className = 'sonido-card';
-  const h = document.createElement('h3'); h.textContent = 'MÚSICOS CONVOCADOS'; card.appendChild(h);
+  const h = document.createElement('h3'); h.textContent = 'CANALES'; card.appendChild(h);
   const rows = {};
 
   for (const id of instIds) {
