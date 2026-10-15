@@ -183,10 +183,9 @@ export function buildRadioCard() {
   btnPlay.addEventListener('click', () => playing ? stopPlay() : startPlay());
 
   btnRandom.addEventListener('click', async () => {
-    const was = playing;
     stopPlay();
     updateStation(pickStation(randomIdx()));
-    if (was) await startPlay();
+    await startPlay();
   });
 
   btnAM.addEventListener('click', () => {
