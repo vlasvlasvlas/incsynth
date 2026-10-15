@@ -217,6 +217,7 @@ export class AudioEngine {
       this._playback = {};
       this._pendingAdvances = {};
       this.expression.pause();
+      this._pulse.reset(); // evita arrancar con _expressionGain bajo de una sesión anterior
       const originTick = Tone.Transport.state === 'started' ? Tone.Transport.ticks + this._notationToTicks('8n') : 0;
       if (Tone.Transport.state !== 'started') Tone.Transport.position = 0;
       Tone.Transport.bpm.value = this._lastBpm;

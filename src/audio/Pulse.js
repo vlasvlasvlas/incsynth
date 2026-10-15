@@ -75,6 +75,12 @@ export class Pulse {
     if (this._kickEnabled) this._step = 0;
   }
 
+  reset() {
+    this._expressionGain = 1;
+    this._kickGain = 1;
+    this._step = 0;
+  }
+
   dispose() {
     this._synth.dispose();
     this._kick.dispose();

@@ -226,7 +226,8 @@ async function init() {
 
   const doToggle = async () => {
     if (!engine) {
-      // Iniciar
+      // Bloquear doble-click durante la inicialización
+      btnPlay.disabled = true;
       engine = new AudioEngine(config, patrones, sala, instrumentos, () => {}, expression);
       if (expression.ended) engine._newCycle();
       const startingEngine = engine;
@@ -248,6 +249,8 @@ async function init() {
           engine = null; window._engine = null;
           btnPlay.textContent = '▶'; btnPlay.classList.remove('playing'); btnPlay.title = 'Reintentar audio';
         }
+      } finally {
+        btnPlay.disabled = false;
       }
     } else {
       // Detener
@@ -259,6 +262,17 @@ async function init() {
     }
   };
   btnPlay.addEventListener('click', doToggle);
+
+  // Recovery del AudioContext si se suspende (pérdida de foco, ahorro de energía en Mac)
+  const resumeAudioCtx = () => {
+    const ctx = Tone.getContext();
+    if (ctx.state === 'suspended') Tone.start().catch(() => {});
+  };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) resumeAudioCtx(); });
+  document.addEventListener('click', resumeAudioCtx, { capture: true, passive: true });
+  Tone.getContext().rawContext.addEventListener?.('statechange', () => {
+    if (Tone.getContext().state === 'suspended') Tone.start().catch(() => {});
+  });
 
   // ── Volumen master (header slider) ──
   const masterVol = document.getElementById('master-vol');
