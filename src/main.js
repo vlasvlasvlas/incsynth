@@ -1010,10 +1010,8 @@ function buildSonidoCard(instIds, instConfig, instrumentos, getEngine) {
       if (!getEngine()?._running) inst._presetKey = sel.value;
       editPanel.syncFromPreset(sel.value);
 
-      const newVol = preset?.volume ?? -18;
-      inst._volumenDb = newVol;
-      volRow.input.value = newVol;
-      volRow.value.textContent = `${Math.round(newVol)} dB`;
+      // El cambio de preset no modifica el volumen del canal; el usuario
+      // decide el nivel. (El preset solo cambia timbre, no mezcla.)
 
       const eng = getEngine();
       if (eng && eng._running) eng.cambiarPreset(id, sel.value);

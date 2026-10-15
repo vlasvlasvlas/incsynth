@@ -16,7 +16,7 @@ export const PRESETS = {
       modulation:  { type: 'sine' },
       modulationEnvelope: { attack: 0.35, decay: 0.1, sustain: 0.8, release: 2 },
     },
-    volume: -16,
+    volume: -3,
   },
 
   PAD: {
@@ -28,7 +28,7 @@ export const PRESETS = {
       oscillator: { type: 'triangle8' },
       envelope:   { attack: 0.55, decay: 0.2, sustain: 0.7, release: 4.0 },
     },
-    volume: -18,
+    volume: -6,
   },
 
   // ─ Ataques medios ─
@@ -41,7 +41,7 @@ export const PRESETS = {
       oscillator: { type: 'triangle' },
       envelope:   { attack: 0.08, decay: 0.15, sustain: 0.75, release: 2.2 },
     },
-    volume: -14,
+    volume: -3,
   },
 
   ORGAN: {
@@ -53,7 +53,7 @@ export const PRESETS = {
       oscillator: { type: 'sawtooth' },
       envelope:   { attack: 0.06, decay: 0, sustain: 1, release: 0.3 },
     },
-    volume: -20,
+    volume: -6,
   },
 
   // ─ Ataques cortos / percusivos ─
@@ -85,7 +85,7 @@ export const PRESETS = {
       envelope:        { attack: 0.001, decay: 0.25, sustain: 0.02, release: 0.4 },
       modulationEnvelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.2 },
     },
-    volume: -13,
+    volume: -3,
   },
 
   MADERA: {
@@ -98,7 +98,7 @@ export const PRESETS = {
       octaves:    2,
       envelope:   { attack: 0.001, decay: 0.2, sustain: 0, release: 0.3 },
     },
-    volume: -12,
+    volume: -3,
   },
 
   PULSO_FM: {
@@ -114,7 +114,7 @@ export const PRESETS = {
       modulation: { type: 'square' },
       modulationEnvelope: { attack: 0.001, decay: 0.08, sustain: 0, release: 0.12 },
     },
-    volume: -15,
+    volume: -3,
   },
 
   METALICO: {
@@ -127,7 +127,7 @@ export const PRESETS = {
       octaves:    5,
       envelope:   { attack: 0.001, decay: 0.5, sustain: 0.01, release: 0.8 },
     },
-    volume: -14,
+    volume: -3,
   },
 
   // ─ Timbres especiales ─
@@ -145,7 +145,7 @@ export const PRESETS = {
       modulation:      { type: 'sine' },
       modulationEnvelope: { attack: 2.5, decay: 1.0, sustain: 0.5, release: 4.0 },
     },
-    volume: -15,
+    volume: -3,
   },
 
   SPACE_LADY: {
@@ -157,7 +157,7 @@ export const PRESETS = {
       oscillator: { type: 'triangle' },
       envelope:   { attack: 0.008, decay: 0.6, sustain: 0.35, release: 3.0 },
     },
-    volume: -20,
+    volume: -6,
   },
 
   // ─ Nuevos timbres para In C (basados en práctica de grabación) ─
@@ -175,7 +175,7 @@ export const PRESETS = {
       modulation:      { type: 'sine' },
       modulationEnvelope: { attack: 0.12, decay: 0.30, sustain: 0.50, release: 3.0 },
     },
-    volume: -16,
+    volume: -3,
   },
 
   VIBRAFONO: {
@@ -191,7 +191,7 @@ export const PRESETS = {
       modulation:      { type: 'sine' },
       modulationEnvelope: { attack: 0.001, decay: 0.5, sustain: 0, release: 2.0 },
     },
-    volume: -15,
+    volume: -3,
   },
 
   MORODER: {
@@ -206,7 +206,7 @@ export const PRESETS = {
       modulation:  { type: 'square' },
       modulationEnvelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.3 },
     },
-    volume: -17,
+    volume: -3,
   },
 
   THEREMIN: {
@@ -222,7 +222,7 @@ export const PRESETS = {
       modulation:      { type: 'sine' },
       modulationEnvelope: { attack: 0.3, decay: 0, sustain: 1, release: 0.5 },
     },
-    volume: -14,
+    volume: -3,
   },
 
   GAMELAN: {
@@ -238,7 +238,7 @@ export const PRESETS = {
       modulation:      { type: 'triangle' },
       modulationEnvelope: { attack: 0.001, decay: 0.6, sustain: 0, release: 1.5 },
     },
-    volume: -13,
+    volume: -3,
   },
 
   VOCODER: {
@@ -253,7 +253,7 @@ export const PRESETS = {
       modulation:  { type: 'sine' },
       modulationEnvelope: { attack: 0.55, decay: 0.1, sustain: 0.7, release: 2.0 },
     },
-    volume: -17,
+    volume: -3,
   },
 
   VANGELIS: {
@@ -279,7 +279,7 @@ export const PRESETS = {
         release: 3.5,
       },
     },
-    volume: -14,
+    volume: -3,
   },
 };
 
