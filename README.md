@@ -615,6 +615,9 @@ Los controles de volumen, presets, síntesis y las capas IA existentes siguen
 - **Respiración:** descansos de frases completas, con reentrada gradual. Sólo se
   inicia un descanso expresivo si otra voz está activa, y no se programan dos
   descansos expresivos simultáneos. Durante el descanso la voz conserva su patrón.
+  Está **desactivada por default** para que la interacción con un canal (cambiar
+  preset, mover un parámetro) no coincida con un silencio y confunda la lectura;
+  se activa desde el panel para interpretaciones largas.
 - **Relevos:** el protagonismo rota lentamente. Las voces de fondo ceden presencia;
   el volumen elegido por el usuario sigue siendo su referencia.
 - **Pulso:** permanece en la grilla; su presencia y ataque se suavizan en los
@@ -625,9 +628,12 @@ Los controles de volumen, presets, síntesis y las capas IA existentes siguen
   y la radio LATAM conviven en un mismo grafo de audio que termina en un limiter
   a -0.3 dBFS. Protege de clipping en el clímax sin comprimir el programa y
   evita que las capas pierdan presencia cuando se suman.
-- **Volumen inicial de canal:** cada músico arranca en -6 dB para quedar
+- **Volumen inicial de canal:** cada músico arranca en -3 dB para quedar
   presente en la mezcla desde la primera nota. El usuario puede modificarlo
   por canal; el limiter master absorbe los picos cuando se cargan muchas capas.
+- **Preset vs mezcla:** cambiar el timbre desde el dropdown de un canal no
+  altera su volumen de mezcla. El fader VOL del canal se mantiene fijo entre
+  presets — el preset decide carácter, el fader decide presencia.
 
 ### Cambios de timbre
 
