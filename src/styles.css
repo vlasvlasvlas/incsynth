@@ -42,9 +42,9 @@ header {
 }
 .header-left {}
 h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
-.subtitle { font-family: var(--mono); font-size: 0.72rem; color: #666; margin-top: 0.15rem; }
+.subtitle { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem; }
 .header-right { display: flex; align-items: center; gap: 0.75rem; }
-.meta-label { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #444; }
+.meta-label { font-family: var(--mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--fg); }
 .momentum-track { width: 60px; height: 2px; background: var(--soft); }
 
 .master-vol-wrap {
@@ -338,7 +338,8 @@ body.sidebar-open #sidebar {
   color: var(--fg);
   background: var(--soft);
 }
-.sb-tab.active {
+.sb-tab.active,
+.sb-tab.active:hover {
   color: var(--fg);
   border-bottom-color: var(--accent);
   background: var(--bg);
@@ -414,10 +415,10 @@ body.sidebar-open #sidebar {
   font-family: var(--mono);
   font-size: 0.52rem;
   line-height: 1.35;
-  color: #444;
+  color: var(--fg);
 }
-.senal-origen b { color: #111; }
-.senal-formula { color: #777; }
+.senal-origen b { color: var(--fg); }
+.senal-formula { color: var(--muted); }
 .data-chip-row,
 .word-list {
   display: flex;
@@ -735,7 +736,7 @@ body.dark-theme .synth-edit-row {
   font-family: var(--mono);
   font-size: 0.52rem;
   line-height: 1.4;
-  color: var(--muted);
+  color: var(--fg);
 }
 .intervencion-grid {
   display: grid;
@@ -972,7 +973,7 @@ body.dark-theme .senal-origen b {
 }
 .modal-text {
   font-family: var(--sans); font-size: 0.82rem; line-height: 1.6;
-  color: #333; margin-bottom: 0.9rem;
+  color: var(--fg); margin-bottom: 0.9rem;
 }
 .modal-text em { font-style: italic; }
 .modal-link {
