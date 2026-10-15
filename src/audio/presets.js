@@ -6,25 +6,25 @@ export const PRESETS = {
   // ─ Ataques lentos / sostenidos ─
   ARCO: {
     nombre: 'Arco (cuerdas)',
-    desc:   'Ataque lento, sostenido, cálido',
+    desc:   'Ataque moderado, sostenido, cálido',
     tipo:   'AMSynth',
     config: {
       harmonicity: 2,
       oscillator:  { type: 'triangle' },
-      envelope:    { attack: 0.35, decay: 0.1, sustain: 0.85, release: 2.5 },
+      envelope:    { attack: 0.18, decay: 0.1, sustain: 0.85, release: 2.5 },
       modulation:  { type: 'sine' },
-      modulationEnvelope: { attack: 0.5, decay: 0.1, sustain: 0.8, release: 2 },
+      modulationEnvelope: { attack: 0.25, decay: 0.1, sustain: 0.8, release: 2 },
     },
     volume: -16,
   },
 
   PAD: {
     nombre: 'Pad (ambiente)',
-    desc:   'Muy lento, etéreo, sin ataque',
+    desc:   'Ataque suave, etéreo, sostenido largo',
     tipo:   'PolySynth',
     config: {
       oscillator: { type: 'triangle8' },
-      envelope:   { attack: 0.9, decay: 0.2, sustain: 0.7, release: 4.0 },
+      envelope:   { attack: 0.32, decay: 0.2, sustain: 0.7, release: 4.0 },
     },
     volume: -18,
   },
@@ -232,9 +232,9 @@ export const PRESETS = {
     config: {
       harmonicity: 0.5,
       oscillator:  { type: 'triangle8' },
-      envelope:    { attack: 0.4, decay: 0.1, sustain: 0.9, release: 2.0 },
+      envelope:    { attack: 0.22, decay: 0.1, sustain: 0.9, release: 2.0 },
       modulation:  { type: 'sine' },
-      modulationEnvelope: { attack: 0.8, decay: 0.1, sustain: 0.7, release: 2.0 },
+      modulationEnvelope: { attack: 0.35, decay: 0.1, sustain: 0.7, release: 2.0 },
     },
     volume: -17,
   },
