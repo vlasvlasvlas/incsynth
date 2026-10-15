@@ -44,7 +44,7 @@ const NEWS_CATALOG = [
       {
         id: 'pagina12',
         name: 'Pagina/12',
-        url: 'https://www.pagina12.com.ar/rss/portada/',
+        url: 'https://www.pagina12.com.ar/rss/',
       },
       {
         id: 'infobae',
