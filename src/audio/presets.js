@@ -32,11 +32,11 @@ export const PRESETS = {
   // ─ Ataques medios ─
   FLAUTA: {
     nombre: 'Flauta',
-    desc:   'Ataque suave, ligeramente aéreo',
+    desc:   'Ataque suave, legato sostenido, aéreo',
     tipo:   'Synth',
     config: {
       oscillator: { type: 'sine' },
-      envelope:   { attack: 0.08, decay: 0.1, sustain: 0.7, release: 1.2 },
+      envelope:   { attack: 0.08, decay: 0.15, sustain: 0.75, release: 2.2 },
     },
     volume: -14,
   },
@@ -149,6 +149,38 @@ export const PRESETS = {
     volume: -20,
   },
 
+  // ─ Nuevos timbres para In C (basados en práctica de grabación) ─
+
+  OBOE: {
+    nombre: 'Oboe / viento melódico',
+    desc:   'FM cálido, sostenido largo, apto para escucha de 45+ minutos',
+    tipo:   'FMSynth',
+    config: {
+      harmonicity:     1.8,
+      modulationIndex: 2.5,
+      oscillator:      { type: 'sine' },
+      envelope:        { attack: 0.10, decay: 0.35, sustain: 0.70, release: 3.8 },
+      modulation:      { type: 'sine' },
+      modulationEnvelope: { attack: 0.12, decay: 0.30, sustain: 0.50, release: 3.0 },
+    },
+    volume: -16,
+  },
+
+  VIBRAFONO: {
+    nombre: 'Vibráfono',
+    desc:   'Percusivo tonal con ring suave — marimba / vibráfono de la grabación CBS 1968',
+    tipo:   'FMSynth',
+    config: {
+      harmonicity:     2,
+      modulationIndex: 8,
+      oscillator:      { type: 'triangle' },
+      envelope:        { attack: 0.002, decay: 0.9, sustain: 0.04, release: 2.8 },
+      modulation:      { type: 'sine' },
+      modulationEnvelope: { attack: 0.001, decay: 0.5, sustain: 0, release: 2.0 },
+    },
+    volume: -15,
+  },
+
   MORODER: {
     nombre: 'Moroder',
     desc:   'Sawtooth driving, filtro sweep, electrónico',
@@ -234,8 +266,8 @@ export const PRESETS = {
 };
 
 export const DEFAULTS = {
-  cuerdas:   'FLAUTA',
+  cuerdas:   'ARCO',
   percusion: 'VANGELIS',
-  melodia:   'MORODER',
+  melodia:   'OBOE',
   mallets:   'GAMELAN',
 };
