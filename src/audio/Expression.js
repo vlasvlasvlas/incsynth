@@ -19,7 +19,7 @@ export const STAGES = [
 ];
 export function createExpressionSettings() {
   return {
-    enabled: true, amount: 0.7, breaths: true, pulse: true, space: true,
+    enabled: true, amount: 0.7, breaths: false, pulse: true, space: true,
     exposure: true, timbres: 'tramos', dwell: 120, randomMinutes: 5,
     ending: 'coda', codaSeconds: 36, intermissionSeconds: 20,
     stages: STAGES.map(s => ({ ...s, presets: [...s.presets] })),
