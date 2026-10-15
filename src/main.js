@@ -105,7 +105,7 @@ async function init() {
     inst._desc      = cfg.descripcion || '';
     inst._fuenteId  = fid;
     inst._presetKey = DEFAULTS[id] || 'ARCO';
-    inst._volumenDb = PRESETS[inst._presetKey]?.volume ?? -18;
+    inst._volumenDb = -6;
     inst._manualSignal = 0;
     inst._manualBlend = 0;
     inst._advanceBias = 0;
