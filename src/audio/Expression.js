@@ -1,17 +1,17 @@
 import { PRESETS } from './presets.js';
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-// Voces: [0] cuerdas (textura/pad)  [1] percusion (articulado)  [2] melodia (cantante)
-// Principio: timbres diferenciados por rol, sin sawtooth en escucha larga (fatiga auditiva).
-// Referencia: grabación CBS 1968 (vientos + marimba + vibráfono + cuerdas).
+// Voces: [0] cuerdas (rol:pad)  [1] percusion (rol:articulado)  [2] melodia (rol:melodico)
+// Cada preset en su posición respeta el rol del instrumento (ver presets.js campo 'roles').
+// Referencia: grabación CBS 1968 (cuerdas/pad + marimba-vibráfono + viento melódico).
 export const STAGES = [
-  { from: 1,  name: 'Apertura',           energy: 0.28, presets: ['FLAUTA',  'VANGELIS',  'OBOE'      ] },
-  { from: 7,  name: 'Primer desarrollo',  energy: 0.50, presets: ['ARCO',    'VIBRAFONO', 'SPACE_LADY'] },
-  { from: 16, name: 'Meseta',             energy: 0.42, presets: ['PAD',     'VANGELIS',  'THEREMIN'  ] },
+  { from: 1,  name: 'Apertura',           energy: 0.28, presets: ['FLAUTA',  'VIBRAFONO', 'OBOE'      ] },
+  { from: 7,  name: 'Primer desarrollo',  energy: 0.50, presets: ['ARCO',    'PIZZ',      'VANGELIS'  ] },
+  { from: 16, name: 'Meseta',             energy: 0.42, presets: ['PAD',     'VIBRAFONO', 'THEREMIN'  ] },
   { from: 25, name: 'Despeje',            energy: 0.18, presets: ['FLAUTA',  'PIZZ',      'SPACE_LADY'] },
   { from: 31, name: 'Segundo desarrollo', energy: 0.58, presets: ['ARCO',    'CAMPANA',   'OBOE'      ] },
   { from: 41, name: 'Plenitud',           energy: 0.80, presets: ['VOCODER', 'GAMELAN',   'THEREMIN'  ] },
-  { from: 48, name: 'Resolución',         energy: 0.24, presets: ['PAD',     'VANGELIS',  'OBOE'      ] },
+  { from: 48, name: 'Resolución',         energy: 0.24, presets: ['PAD',     'VIBRAFONO', 'VANGELIS'  ] },
 ];
 export function createExpressionSettings() {
   return {

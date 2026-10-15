@@ -7,6 +7,7 @@ export const PRESETS = {
   ARCO: {
     nombre: 'Arco (cuerdas)',
     desc:   'Ataque moderado, sostenido, cálido',
+    roles:  ['pad'],
     tipo:   'AMSynth',
     config: {
       harmonicity: 2,
@@ -21,6 +22,7 @@ export const PRESETS = {
   PAD: {
     nombre: 'Pad (ambiente)',
     desc:   'Ataque suave, etéreo, sostenido largo',
+    roles:  ['pad'],
     tipo:   'PolySynth',
     config: {
       oscillator: { type: 'triangle8' },
@@ -33,6 +35,7 @@ export const PRESETS = {
   FLAUTA: {
     nombre: 'Flauta',
     desc:   'Ataque suave, legato sostenido, aéreo',
+    roles:  ['pad', 'melodico'],
     tipo:   'Synth',
     config: {
       oscillator: { type: 'sine' },
@@ -44,6 +47,7 @@ export const PRESETS = {
   ORGAN: {
     nombre: 'Órgano',
     desc:   'Sostenido, con armónicos ricos',
+    roles:  ['pad'],
     tipo:   'PolySynth',
     config: {
       oscillator: { type: 'sawtooth' },
@@ -56,6 +60,7 @@ export const PRESETS = {
   CAMPANA: {
     nombre: 'Campana / vibráfono',
     desc:   'Ataque inmediato, decaimiento lento',
+    roles:  ['articulado'],
     tipo:   'FMSynth',
     config: {
       harmonicity:     5.1,
@@ -71,6 +76,7 @@ export const PRESETS = {
   PIZZ: {
     nombre: 'Pizzicato',
     desc:   'Punteo seco, muy corto',
+    roles:  ['articulado'],
     tipo:   'FMSynth',
     config: {
       harmonicity:     2.5,
@@ -85,6 +91,7 @@ export const PRESETS = {
   MADERA: {
     nombre: 'Madera / clave',
     desc:   'Percusivo tonal, seco',
+    roles:  ['articulado'],
     tipo:   'MembraneSynth',
     config: {
       pitchDecay: 0.04,
@@ -97,6 +104,7 @@ export const PRESETS = {
   PULSO_FM: {
     nombre: 'Pulso FM',
     desc:   'Ataque electrónico corto, grave definido y armónicos sintéticos',
+    roles:  ['articulado'],
     tipo:   'FMSynth',
     config: {
       harmonicity: 1.5,
@@ -112,6 +120,7 @@ export const PRESETS = {
   METALICO: {
     nombre: 'Metálico',
     desc:   'Percusivo brillante, reverberante',
+    roles:  ['articulado'],
     tipo:   'MembraneSynth',
     config: {
       pitchDecay: 0.12,
@@ -126,6 +135,7 @@ export const PRESETS = {
   COSMOS: {
     nombre: 'Cosmos',
     desc:   'Drone espacial, lentísimo, alien',
+    roles:  ['pad'],
     tipo:   'FMSynth',
     config: {
       harmonicity:     9,
@@ -141,6 +151,7 @@ export const PRESETS = {
   SPACE_LADY: {
     nombre: 'Space Lady',
     desc:   'Casio puro, cristalino, sin adornos',
+    roles:  ['melodico'],
     tipo:   'Synth',
     config: {
       oscillator: { type: 'triangle' },
@@ -154,6 +165,7 @@ export const PRESETS = {
   OBOE: {
     nombre: 'Oboe / viento melódico',
     desc:   'FM cálido, sostenido largo, apto para escucha de 45+ minutos',
+    roles:  ['melodico'],
     tipo:   'FMSynth',
     config: {
       harmonicity:     1.8,
@@ -169,6 +181,7 @@ export const PRESETS = {
   VIBRAFONO: {
     nombre: 'Vibráfono',
     desc:   'Percusivo tonal con ring suave — marimba / vibráfono de la grabación CBS 1968',
+    roles:  ['articulado'],
     tipo:   'FMSynth',
     config: {
       harmonicity:     2,
@@ -184,6 +197,7 @@ export const PRESETS = {
   MORODER: {
     nombre: 'Moroder',
     desc:   'Sawtooth driving, filtro sweep, electrónico',
+    roles:  ['melodico'],
     tipo:   'AMSynth',
     config: {
       harmonicity: 2,
@@ -198,6 +212,7 @@ export const PRESETS = {
   THEREMIN: {
     nombre: 'Theremin',
     desc:   'Sine con vibrato suave, líquido',
+    roles:  ['melodico'],
     tipo:   'FMSynth',
     config: {
       harmonicity:     1,
@@ -213,6 +228,7 @@ export const PRESETS = {
   GAMELAN: {
     nombre: 'Gamelan',
     desc:   'Bronce percusivo, inarmónico, exótico',
+    roles:  ['articulado'],
     tipo:   'FMSynth',
     config: {
       harmonicity:     3.01,
@@ -228,6 +244,7 @@ export const PRESETS = {
   VOCODER: {
     nombre: 'Vocoder / coral',
     desc:   'Ominoso, voces procesadas, denso',
+    roles:  ['pad'],
     tipo:   'AMSynth',
     config: {
       harmonicity: 0.5,
@@ -242,6 +259,7 @@ export const PRESETS = {
   VANGELIS: {
     nombre: 'Vangelis (Rhodes onírico)',
     desc:   'Rhodes metálico suave, largo sustain, ensueño — Apocalypse des Animaux',
+    roles:  ['melodico'],
     tipo:   'FMSynth',
     config: {
       harmonicity:     2.01,

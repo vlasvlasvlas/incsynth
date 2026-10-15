@@ -1,25 +1,28 @@
 {
-  "instrumentos": {
-    "cuerdas": {
-      "tipo": "PolySynth",
-      "nombre": "CUERDAS",
-      "descripcion": "Ataque suave · sostenido",
-      "color_hex": "#3550ff",
-      "fuente_default": "clima"
-    },
-    "percusion": {
-      "tipo": "MembraneSynth",
-      "nombre": "PERCUSIÓN",
-      "descripcion": "Golpe seco · impulsivo",
-      "color_hex": "#d500f9",
-      "fuente_default": "bolsa"
-    },
-    "melodia": {
-      "tipo": "Synth",
-      "nombre": "MELODÍA",
-      "descripcion": "Figura aguda · puntual",
-      "color_hex": "#ffb300",
-      "fuente_default": "noticias"
+    "instrumentos": {
+        "cuerdas": {
+            "tipo": "PolySynth",
+            "nombre": "CUERDAS",
+            "descripcion": "Ataque suave · sostenido",
+            "color_hex": "#3550ff",
+            "fuente_default": "clima",
+            "rol": "pad"
+        },
+        "percusion": {
+            "tipo": "MembraneSynth",
+            "nombre": "PERCUSIÓN",
+            "descripcion": "Golpe seco · impulsivo",
+            "color_hex": "#d500f9",
+            "fuente_default": "bolsa",
+            "rol": "articulado"
+        },
+        "melodia": {
+            "tipo": "Synth",
+            "nombre": "MELODÍA",
+            "descripcion": "Figura aguda · puntual",
+            "color_hex": "#ffb300",
+            "fuente_default": "noticias",
+            "rol": "melodico"
+        }
     }
-  }
 }

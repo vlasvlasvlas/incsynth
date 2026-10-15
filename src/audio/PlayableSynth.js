@@ -152,13 +152,13 @@ export class PlayableSynth {
 
   setArpEnabled(enabled) {
     this.arpEnabled = Boolean(enabled);
-    // Limpiar el voice al activar para que el arp arranque limpio
-    try { this.voice?.releaseAll(); } catch (_) {}
     this._arpIndex = 0;
     if (this.arpEnabled) {
       this._startArp();
     } else {
       this._stopArp();
+      // Dejar que el release natural del envelope corte las notas del arp
+      try { this.voice?.releaseAll(); } catch (_) {}
     }
     this._emit();
   }
