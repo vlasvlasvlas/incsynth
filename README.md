@@ -625,6 +625,9 @@ Los controles de volumen, presets, síntesis y las capas IA existentes siguen
   y la radio LATAM conviven en un mismo grafo de audio que termina en un limiter
   a -0.3 dBFS. Protege de clipping en el clímax sin comprimir el programa y
   evita que las capas pierdan presencia cuando se suman.
+- **Volumen inicial de canal:** cada músico arranca en -6 dB para quedar
+  presente en la mezcla desde la primera nota. El usuario puede modificarlo
+  por canal; el limiter master absorbe los picos cuando se cargan muchas capas.
 
 ### Cambios de timbre
 
