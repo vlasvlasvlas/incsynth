@@ -25,6 +25,7 @@ import * as cuartoMusico from './ai/cuartoMusico.js';
 import { buildCuartoMusicoCard } from './ui/cuartoMusicoControl.js';
 import { Expression } from './audio/Expression.js';
 import { buildExpressionCard } from './ui/expressionControl.js';
+import { buildRadioCard } from './ui/radioControl.js';
 import { PatternReader } from './ui/PatternReader.js';
 
 const SOURCE_EXPLAINERS = {
@@ -187,6 +188,7 @@ async function init() {
   primaryEl.appendChild(buildPlayableSynthCard(playableSynth));
   const ritmoPanel = buildRitmoCard(() => engine);
   primaryEl.appendChild(ritmoPanel.card);
+  primaryEl.appendChild(buildRadioCard());
   primaryEl.appendChild(salaPanelRoot);
 
   // Ciudad
