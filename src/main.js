@@ -80,8 +80,9 @@ async function init() {
 
   const fuentes = { clima: climaFuente, mercado: mercadoFuente, noticias: noticiasFuente };
 
-  // ── Inicializar IA ──
-  await cuartoMusico.init();
+  // ── Inicializar IA (solo si está habilitada en config.features) ──
+  const iaEnabled = config.features?.cuartoMusico === true;
+  if (iaEnabled) await cuartoMusico.init();
 
   // ── Instrumentos (auto-conectados) ──
   const instIds   = Object.keys(config.instrumentos);
@@ -114,13 +115,13 @@ async function init() {
     sala.registrarInstrumento(id, 0);
     inst.conectarFuentes([{ id: `${fid}_A`, tipo: fid, source: fuentes[fid], mapeo }]);
   }
-  cuartoMusico.configurarContexto(instrumentos, sala);
-
-  // Iniciar logger de sesión con metadata disponible
-  cuartoMusico.iniciarSesion({
-    ciudad:  climaFuente._ciudad || 'Buenos Aires',
-    fuentes: Object.fromEntries(instIds.map((id, i) => [id, fuenteIds[i]])),
-  });
+  if (iaEnabled) {
+    cuartoMusico.configurarContexto(instrumentos, sala);
+    cuartoMusico.iniciarSesion({
+      ciudad:  climaFuente._ciudad || 'Buenos Aires',
+      fuentes: Object.fromEntries(instIds.map((id, i) => [id, fuenteIds[i]])),
+    });
+  }
 
   const setInstrumentSource = (id, fid) => {
     const inst = instrumentos[id];
@@ -208,7 +209,7 @@ async function init() {
 
   // Lente país
   tableroEl.appendChild(buildLenteCard(paisesData, lenteFuente, instrumentos));
-  tableroEl.appendChild(buildCuartoMusicoCard(cuartoMusico));
+  if (iaEnabled) tableroEl.appendChild(buildCuartoMusicoCard(cuartoMusico));
 
   // Timbres
   const sonidoPanel = buildSonidoCard(instIds, config.instrumentos, instrumentos, () => engine);
@@ -1152,7 +1153,7 @@ function buildRitmoCard(getEngine) {
     if (bpmInput.value !== '') applyBpm(bpmInput.value);
   });
   bpmInput.addEventListener('change', () => applyBpm(bpmInput.value));
-  applyBpm(70);
+  applyBpm(67);
   bpmRow.appendChild(bpmLbl); bpmRow.appendChild(bpmInput);
   grid.appendChild(bpmRow);
 

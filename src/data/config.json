@@ -1,4 +1,8 @@
 {
+    "features": {
+        "cuartoMusico": false,
+        "microfono": false
+    },
     "instrumentos": {
         "cuerdas": {
             "tipo": "PolySynth",
