@@ -25,14 +25,18 @@ export function buildRadioCard() {
       if (!stream) throw new Error('no captureStream');
       const src = audioCtx.createMediaStreamSource(stream);
 
-      hpNode   = audioCtx.createBiquadFilter(); hpNode.type = 'highpass';  hpNode.frequency.value = 20;
-      lpNode   = audioCtx.createBiquadFilter(); lpNode.type = 'lowpass';   lpNode.frequency.value = 20000;
-      amNode   = audioCtx.createBiquadFilter(); amNode.type = 'bandpass';  amNode.frequency.value = 20000; amNode.Q.value = 0.01;
-      delayNode = audioCtx.createDelay(2.0);    delayNode.delayTime.value = 0;
-      masterGain = audioCtx.createGain();       masterGain.gain.value = parseFloat(volSlider.value);
+      hpNode    = audioCtx.createBiquadFilter(); hpNode.type = 'highpass'; hpNode.frequency.value = 20;
+      lpNode    = audioCtx.createBiquadFilter(); lpNode.type = 'lowpass';  lpNode.frequency.value = 20000;
+      amNode    = audioCtx.createBiquadFilter(); amNode.type = 'bandpass'; amNode.frequency.value = 20000; amNode.Q.value = 0.01;
+      delayNode = audioCtx.createDelay(2.0);     delayNode.delayTime.value = 0;
+      masterGain = audioCtx.createGain();         masterGain.gain.value = parseFloat(volSlider.value);
 
       src.connect(hpNode); hpNode.connect(lpNode); lpNode.connect(amNode);
       amNode.connect(delayNode); delayNode.connect(masterGain); masterGain.connect(audioCtx.destination);
+
+      // Mutear el elemento para que solo salga por WebAudio (evita doble output sin FX)
+      audio.muted = true;
+
       fxReady = true;
     } catch (_) { fxReady = false; }
   }
@@ -154,9 +158,10 @@ export function buildRadioCard() {
     try {
       await audio.play();
       playing = true;
-      initFX();
+      initFX();  // captura el stream YA reproduciendo y mutea el elemento
       if (audioCtx?.state === 'suspended') await audioCtx.resume();
-      if (masterGain) masterGain.gain.value = parseFloat(volSlider.value);
+      if (fxReady && masterGain) masterGain.gain.value = parseFloat(volSlider.value);
+      else audio.muted = false; // si FX falló, desmutear para que suene
       setStatus(fxReady ? 'en vivo · fx' : 'en vivo');
     } catch (e) {
       setStatus('error — probá random');
@@ -169,6 +174,7 @@ export function buildRadioCard() {
     userWantsPlay = false;
     clearTimeout(loadTimer);
     audio.pause();
+    audio.muted = false;
     playing = false;
     updatePlayBtn();
     setStatus('');
