@@ -35,3 +35,9 @@ __pycache__/
 
 # Sesiones de escucha (datos personales, no versionar)
 lab/sesiones/
+
+# Corpus de audio (datos raw, cientos de MB)
+lab/corpus/
+
+# Experimentos versionados en carpetas tipo lab/26.1.2/
+lab/[0-9]*/

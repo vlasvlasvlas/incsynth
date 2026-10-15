@@ -1,7 +1,7 @@
 import * as Tone from 'tone';
 
 export class Pulse {
-  constructor() {
+  constructor(masterNode = null) {
     this.degradacion = 0;
     this._note = 'C6';
     this._waveform = 'sine';
@@ -9,17 +9,18 @@ export class Pulse {
     this._step = 0;
     this._expressionGain = 1;
     this._kickGain = 1;
-    this._synth = new Tone.Synth({
+    const sink = node => masterNode ? node.connect(masterNode) : node.toDestination();
+    this._synth = sink(new Tone.Synth({
       oscillator: { type: this._waveform },
       envelope: { attack: 0.002, decay: 0.1, sustain: 0, release: 0.05 },
-    }).toDestination();
+    }));
     this._synth.volume.value = -23;
-    this._kick = new Tone.MembraneSynth({
+    this._kick = sink(new Tone.MembraneSynth({
       pitchDecay: 0.09,
       octaves: 3,
       oscillator: { type: 'sine' },
       envelope: { attack: 0.001, decay: 0.22, sustain: 0, release: 0.12 },
-    }).toDestination();
+    }));
     this._kick.volume.value = -18;
   }
 

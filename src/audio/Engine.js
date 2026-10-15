@@ -7,14 +7,15 @@ import { Expression } from './Expression.js';
 import { compilePattern } from './score.js';
 
 export class AudioEngine {
-  constructor(config, patrones, sala, instrumentos, onCiclo, expression = null) {
+  constructor(config, patrones, sala, instrumentos, onCiclo, expression = null, { masterNode = null } = {}) {
     this.patrones     = patrones;
     this.sala         = sala;
     this.instrumentos = instrumentos;
     this.onCiclo      = onCiclo;
     this.synths       = {};
     this.filtros      = {};
-    this._pulse       = new Pulse();
+    this._masterNode  = masterNode;
+    this._pulse       = new Pulse(masterNode);
     this._running     = false;
     this._lastBpm      = 70;
     this._transportEvents = new Set();
@@ -30,7 +31,9 @@ export class AudioEngine {
     this._endedAt = null;
 
     // Reverb compartida contenida para mantener legible la grilla.
-    this._reverb = new Tone.Reverb({ decay: 2.8, wet: 0.12 }).toDestination();
+    // Si hay bus master compartido, el reverb va ahí (limiter real). Si no, destination.
+    const reverb = new Tone.Reverb({ decay: 2.8, wet: 0.12 });
+    this._reverb = masterNode ? reverb.connect(masterNode) : reverb.toDestination();
     this._reverbReady = this._reverb.generate();
 
     // Construir un synth por instrumento según su preset por defecto

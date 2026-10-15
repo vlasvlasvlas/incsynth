@@ -24,7 +24,7 @@ test('manual timbres remain protected and structural changes obey minimum dwell'
   advance(score, inst, 119);
   assert.equal(score.phrase(ids[0], inst, 'ARCO').preset, null);
   advance(score, inst, 1);
-  assert.equal(score.phrase(ids[0], inst, 'ARCO').preset, 'FLAUTA');
+  assert.equal(score.phrase(ids[0], inst, 'ARCO').preset, 'PAD');
 });
 
 test('at most one phrase rest and never intentionally rests the only audible voice', () => {

@@ -4,7 +4,7 @@
 
 ## Qué es esto
 
-Subproyecto de IA para la app [In C / Mundo Real](https://vlasvlasvlas.github.io/incysynth/). La app ya funciona sin IA. Este laboratorio agrega una capa opcional de inteligencia artificial que se prende/apaga con un dial llamado **"CUARTO MÚSICO"**.
+Subproyecto de IA para la app [In C / Mundo Real](https://vlasvlasvlas.github.io/incsynth/). La app ya funciona sin IA. Este laboratorio agrega una capa opcional de inteligencia artificial que se prende/apaga con un dial llamado **"CUARTO MÚSICO"**.
 
 ## La idea en una oración
 

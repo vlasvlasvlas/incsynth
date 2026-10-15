@@ -1674,3 +1674,34 @@ body.dark-theme #circle-container {
  .ensemble-map { margin:0 12px 20px; }
  #circle-container { height:190px; }
 }
+
+/* A compact layer of live voices, with equally sized effect controls. */
+.radio-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; justify-content: space-between; }
+.radio-heading h3 { margin: 0; }
+.radio-live, .radio-description, .radio-control { font-family: var(--mono); font-size: 0.55rem; }
+.radio-live, .radio-description { color: var(--muted); }
+.radio-description { margin: 0.4rem 0 0.7rem; line-height: 1.5; }
+.radio-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-bottom: 0.8rem; }
+.radio-actions .radio-status { flex: 1 1 160px; margin: 0; line-height: 1.5; }
+.radio-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem 1rem; }
+.radio-control { display: grid; grid-template-columns: 1fr auto; gap: 0.25rem 0.5rem; color: var(--muted); min-width: 0; }
+.radio-control output { color: var(--fg); grid-column: 2; grid-row: 1; font-variant-numeric: tabular-nums; }
+.radio-control input { grid-column: 1 / -1; width: 100%; min-width: 0; margin: 0; height: 20px; accent-color: var(--fg); cursor: pointer; }
+.radio-control input:focus-visible, .radio-card button:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+@media (max-width: 480px) { .radio-controls { grid-template-columns: 1fr; } }
+.radio-filter { grid-column: 1 / -1; }
+.radio-filter-track { grid-column: 1 / -1; position: relative; height: 28px; margin: 0 9px; }
+.radio-filter-track::before, .radio-filter-band { content: ''; position: absolute; top: 12px; height: 4px; border-radius: 2px; }
+.radio-filter-track::before { inset-inline: 0; background: var(--line); }
+.radio-filter-band { left: var(--filter-low); right: calc(100% - var(--filter-high)); background: var(--fg); }
+.radio-filter-track input[type="range"] { appearance: none; -webkit-appearance: none; position: absolute; inset: 0 -9px; width: calc(100% + 18px); height: 28px; background: transparent; pointer-events: none; accent-color: auto; }
+.radio-filter-track input::-webkit-slider-runnable-track { background: transparent; height: 4px; }
+.radio-filter-track input::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; pointer-events: auto; width: 18px; height: 18px; margin-top: -7px; border: 2px solid var(--bg); border-radius: 50%; background: var(--fg); cursor: ew-resize; }
+.radio-filter-track input::-moz-range-track { background: transparent; height: 4px; }
+.radio-filter-track input::-moz-range-thumb { pointer-events: auto; box-sizing: border-box; width: 18px; height: 18px; border: 2px solid var(--bg); border-radius: 50%; background: var(--fg); cursor: ew-resize; }
+.radio-filter-track input:focus-visible { z-index: 2; }
+/* The band has a generous invisible drag area; the two thumbs stay above it. */
+.radio-filter-band { top: 0; height: 28px; padding: 0; border: 0; border-radius: 0; background: transparent; cursor: grab; touch-action: none; z-index: 1; }
+.radio-filter-band::before { content: ''; position: absolute; inset: 12px 0; background: var(--fg); border-radius: 2px; }
+.radio-filter-band.dragging { cursor: grabbing; }
+.radio-filter-track input[type="range"] { z-index: 2; }
