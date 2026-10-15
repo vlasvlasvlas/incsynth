@@ -1,230 +1,123 @@
 import { RADIO_STREAMS } from '../data/radioStreams.js';
+import { RadioPlayer } from '../audio/RadioPlayer.js';
+import { masterNative } from '../audio/audioMaster.js';
 
 export function buildRadioCard() {
-  let currentIdx = -1;
-  let playing = false;
-  let userWantsPlay = false;
-  let fxReady = false;
-  let amOn = false;
-
-  let audioCtx = null;
-  let hpNode = null;
-  let lpNode = null;
-  let amNode = null;
-  let delayNode = null;
-  let masterGain = null;
-
-  // crossOrigin requerido para createMediaElementSource (redirige output por WebAudio)
-  const audio = new Audio();
-  audio.crossOrigin = 'anonymous';
-  audio.preload = 'none';
-
-  function initFX() {
-    if (fxReady) return;
-    try {
-      audioCtx = new AudioContext();
-      // createMediaElementSource redirige TODO el output por WebAudio (no necesita mute)
-      const src = audioCtx.createMediaElementSource(audio);
-
-      hpNode     = audioCtx.createBiquadFilter(); hpNode.type = 'highpass'; hpNode.frequency.value = 20;
-      lpNode     = audioCtx.createBiquadFilter(); lpNode.type = 'lowpass';  lpNode.frequency.value = 20000;
-      amNode     = audioCtx.createBiquadFilter(); amNode.type = 'bandpass'; amNode.frequency.value = 20000; amNode.Q.value = 0.01;
-      delayNode  = audioCtx.createDelay(2.0);     delayNode.delayTime.value = 0;
-      masterGain = audioCtx.createGain();          masterGain.gain.value = parseFloat(volSlider.value);
-
-      src.connect(hpNode);
-      hpNode.connect(lpNode);
-      lpNode.connect(amNode);
-      amNode.connect(delayNode);
-      delayNode.connect(masterGain);
-      masterGain.connect(audioCtx.destination);
-
-      fxReady = true;
-    } catch (e) {
-      fxReady = false;
+  const card = document.createElement('section');
+  card.className = 'lente-card radio-card';
+  card.innerHTML = `
+    <div class="radio-heading"><h3>Voces de LATAM</h3><span class="radio-live">RADIO EN VIVO</span></div>
+    <p class="radio-description">Una voz del continente se suma a la música.</p>
+    <div class="radio-actions">
+      <button type="button" class="lente-btn radio-play">▶ Play</button>
+      <button type="button" class="lente-btn radio-next">⟳ Random</button>
+      <span class="radio-status" role="status" aria-live="polite">Lista para escuchar</span>
+    </div>
+    <div class="radio-controls"></div>`;
+  const play = card.querySelector('.radio-play');
+  const next = card.querySelector('.radio-next');
+  const status = card.querySelector('.radio-status');
+  let active = false;
+  const player = new RadioPlayer(RADIO_STREAMS, ({ state, station, message }) => {
+    active = state === 'playing' || state === 'loading';
+    play.textContent = active ? '■ Stop' : '▶ Play';
+    play.classList.toggle('active', active);
+    play.setAttribute('aria-pressed', String(active));
+    status.textContent = station
+      ? `${state === 'loading' ? 'Conectando · ' : ''}${station.nombre} · ${station.pais}`
+      : message || 'Lista para escuchar';
+  }, { masterNode: masterNative() });
+  play.setAttribute('aria-pressed', 'false');
+  play.addEventListener('click', () => active ? player.stop() : player.start());
+  next.addEventListener('click', () => player.start({ random: true }));
+  const controls = card.querySelector('.radio-controls');
+  const hz = value => value >= 1000 ? `${+(value / 1000).toFixed(1)} kHz` : `${value} Hz`;
+  function control(key, title, min, max, step, format) {
+    const label = document.createElement('label');
+    label.className = 'radio-control';
+    const name = document.createElement('span'); name.textContent = title;
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = min; input.max = max; input.step = step;
+    input.value = player.settings[key]; input.setAttribute('aria-label', title);
+    const output = document.createElement('output');
+    const update = () => {
+      const value = Number(input.value);
+      output.textContent = format(value);
+      input.setAttribute('aria-valuetext', output.textContent);
+      player.set(key, value);
+    };
+    input.addEventListener('input', update); update();
+    label.append(name, input, output); controls.append(label);
+  }
+  const filter = document.createElement('div');
+  filter.className = 'radio-filter radio-control';
+  filter.innerHTML = `<span>Filtro · pasaaltos / pasabajos</span><output></output>
+    <div class="radio-filter-track"><button type="button" class="radio-filter-band" aria-label="Mover ambos filtros" title="Arrastrá para mover ambos filtros; también podés usar las flechas"></button>
+      <input type="range" min="0" max="1000" step="1" aria-label="Pasaaltos">
+      <input type="range" min="0" max="1000" step="1" aria-label="Pasabajos">
+    </div>`;
+  const [high, low] = filter.querySelectorAll('input');
+  const output = filter.querySelector('output');
+  const band = filter.querySelector('.radio-filter-band');
+  const track = filter.querySelector('.radio-filter-track');
+  // Logarithmic frequency scale: bass and treble remain equally easy to adjust.
+  const toPosition = hz => Math.log(hz / 20) / Math.log(1000) * 1000;
+  const toHz = position => Math.round(20 * 1000 ** (position / 1000));
+  high.value = toPosition(player.settings.highpass);
+  low.value = toPosition(player.settings.lowpass);
+  function updateFilter(changed) {
+    if (+high.value >= +low.value) {
+      if (changed === high) high.value = +low.value - 1;
+      else low.value = +high.value + 1;
     }
+    const hp = toHz(+high.value), lp = toHz(+low.value);
+    player.set('highpass', hp); player.set('lowpass', lp);
+    high.setAttribute('aria-valuetext', hz(hp)); low.setAttribute('aria-valuetext', hz(lp));
+    output.textContent = `${hz(hp)} — ${hz(lp)}`;
+    filter.style.setProperty('--filter-low', `${+high.value / 10}%`);
+    filter.style.setProperty('--filter-high', `${+low.value / 10}%`);
   }
-
-  function pickStation(idx) {
-    const s = RADIO_STREAMS[idx];
-    if (!s) return null;
-    currentIdx = idx;
-    audio.src = s.url;
-    return s;
+  high.addEventListener('input', () => updateFilter(high));
+  low.addEventListener('input', () => updateFilter(low));
+  function moveBand(startHigh, startLow, delta) {
+    const shift = Math.max(-startHigh, Math.min(1000 - startLow, Math.round(delta)));
+    high.value = startHigh + shift;
+    low.value = startLow + shift;
+    updateFilter();
   }
-
-  function randomIdx() {
-    const pool = RADIO_STREAMS.map((_, i) => i).filter(i => i !== currentIdx);
-    return pool[Math.floor(Math.random() * pool.length)];
-  }
-
-  // ── Card ─────────────────────────────────────────────────────────────────────
-
-  const card = document.createElement('div');
-  card.className = 'lente-card';
-
-  function row(...children) {
-    const d = document.createElement('div');
-    d.style.cssText = 'display:flex;align-items:center;gap:0.35rem;margin-bottom:0.28rem;min-width:0;';
-    children.forEach(c => d.appendChild(c));
-    return d;
-  }
-
-  function lbl(txt, minW = '22px') {
-    const s = document.createElement('span');
-    s.className = 'lente-label';
-    s.style.minWidth = minW;
-    s.textContent = txt;
-    return s;
-  }
-
-  function btn(txt, title = '') {
-    const b = document.createElement('button');
-    b.className = 'lente-btn';
-    b.style.cssText = 'flex:0 0 auto;';
-    b.textContent = txt;
-    if (title) b.title = title;
-    return b;
-  }
-
-  function slider(min, max, step, val) {
-    const s = document.createElement('input');
-    s.type = 'range'; s.min = min; s.max = max; s.step = step; s.value = val;
-    s.className = 'lente-slider';
-    s.style.flex = '1';
-    return s;
-  }
-
-  // Header
-  const headLbl = document.createElement('span');
-  headLbl.className = 'lente-label'; headLbl.textContent = 'RADIO EN VIVO';
-  headLbl.style.display = 'block'; headLbl.style.marginBottom = '0.35rem';
-  card.appendChild(headLbl);
-
-  // Station display
-  const stationEl = document.createElement('div');
-  stationEl.className = 'radio-station-display';
-  stationEl.textContent = '— sin señal —';
-  card.appendChild(stationEl);
-
-  // Row 1: play + random + status
-  const btnPlay   = btn('▶');
-  const btnRandom = btn('⟳ random');
-  const statusEl  = document.createElement('span');
-  statusEl.className = 'radio-status';
-  statusEl.style.cssText = 'flex:1;text-align:right;';
-  card.appendChild(row(btnPlay, btnRandom, statusEl));
-
-  // Row HP
-  const hpSlider = slider('20', '4000', '10', '20');
-  const hpVal = lbl('20 Hz', '42px'); hpVal.style.textAlign = 'right';
-  card.appendChild(row(lbl('HP'), hpSlider, hpVal));
-
-  // Row LP
-  const lpSlider = slider('500', '20000', '100', '20000');
-  const lpVal = lbl('20k Hz', '42px'); lpVal.style.textAlign = 'right';
-  card.appendChild(row(lbl('LP'), lpSlider, lpVal));
-
-  // Row AM + Delay
-  const btnAM = btn('AM');
-  const delaySlider = slider('0', '0.8', '0.01', '0');
-  delaySlider.style.flex = '0 0 70px';
-  card.appendChild(row(btnAM, lbl('DLY'), delaySlider));
-
-  // Row Vol
-  const volSlider = slider('0', '1', '0.01', '0.6');
-  card.appendChild(row(lbl('VOL'), volSlider));
-
-  // ── Logic ────────────────────────────────────────────────────────────────────
-
-  function setStatus(t) { statusEl.textContent = t; }
-
-  function updateStation(s) {
-    stationEl.textContent = s ? `${s.flag} ${s.nombre} · ${s.pais}` : '— sin señal —';
-  }
-
-  function updatePlayBtn() {
-    btnPlay.textContent = playing ? '■' : '▶';
-    btnPlay.classList.toggle('active', playing);
-  }
-
-  let loadTimer = null;
-
-  async function startPlay() {
-    userWantsPlay = true;
-    if (currentIdx === -1) updateStation(pickStation(randomIdx()));
-    setStatus('cargando...');
-    clearTimeout(loadTimer);
-    loadTimer = setTimeout(() => { if (!playing) setStatus('sin respuesta — probá ⟳'); }, 10000);
-    try {
-      initFX(); // inicializar antes de play para que createMediaElementSource tome el output
-      if (audioCtx?.state === 'suspended') await audioCtx.resume();
-      await audio.play();
-      playing = true;
-      if (fxReady && masterGain) masterGain.gain.value = parseFloat(volSlider.value);
-      else audio.volume = parseFloat(volSlider.value);
-      setStatus(fxReady ? 'en vivo · fx' : 'en vivo');
-    } catch (e) {
-      setStatus('sin CORS — probá ⟳ random');
-    }
-    clearTimeout(loadTimer);
-    updatePlayBtn();
-  }
-
-  function stopPlay() {
-    userWantsPlay = false;
-    clearTimeout(loadTimer);
-    audio.pause();
-    playing = false;
-    updatePlayBtn();
-    setStatus('');
-  }
-
-  btnPlay.addEventListener('click', () => playing ? stopPlay() : startPlay());
-
-  btnRandom.addEventListener('click', async () => {
-    stopPlay();
-    updateStation(pickStation(randomIdx()));
-    await startPlay();
+  let drag = null;
+  band.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || drag) return;
+    const width = track.getBoundingClientRect().width;
+    if (!width) return;
+    event.preventDefault();
+    band.focus({ preventScroll: true });
+    drag = { id: event.pointerId, x: event.clientX, high: +high.value, low: +low.value, width };
+    band.setPointerCapture(event.pointerId);
+    band.classList.add('dragging');
   });
-
-  btnAM.addEventListener('click', () => {
-    amOn = !amOn;
-    btnAM.classList.toggle('active', amOn);
-    if (!amNode) return;
-    amNode.frequency.value = amOn ? 1400 : 20000;
-    amNode.Q.value         = amOn ? 1.4  : 0.01;
+  band.addEventListener('pointermove', event => {
+    if (!drag || event.pointerId !== drag.id) return;
+    moveBand(drag.high, drag.low, (event.clientX - drag.x) / drag.width * 1000);
   });
-
-  hpSlider.addEventListener('input', () => {
-    const v = parseInt(hpSlider.value);
-    hpVal.textContent = v >= 1000 ? `${(v/1000).toFixed(1)}k` : `${v} Hz`;
-    if (hpNode) hpNode.frequency.value = v;
+  function finishDrag(event) {
+    if (!drag || event.pointerId !== drag.id) return;
+    drag = null;
+    band.classList.remove('dragging');
+    if (band.hasPointerCapture(event.pointerId)) band.releasePointerCapture(event.pointerId);
+  }
+  band.addEventListener('pointerup', finishDrag);
+  band.addEventListener('pointercancel', finishDrag);
+  band.addEventListener('lostpointercapture', finishDrag);
+  band.addEventListener('keydown', event => {
+    const direction = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 }[event.key];
+    if (!direction) return;
+    event.preventDefault();
+    moveBand(+high.value, +low.value, direction * (event.shiftKey ? 50 : 10));
   });
-
-  lpSlider.addEventListener('input', () => {
-    const v = parseInt(lpSlider.value);
-    lpVal.textContent = v >= 1000 ? `${(v/1000).toFixed(0)}k` : `${v} Hz`;
-    if (lpNode) lpNode.frequency.value = v;
-  });
-
-  delaySlider.addEventListener('input', () => {
-    if (delayNode) delayNode.delayTime.value = parseFloat(delaySlider.value);
-  });
-
-  volSlider.addEventListener('input', () => {
-    const v = parseFloat(volSlider.value);
-    if (fxReady && masterGain) masterGain.gain.value = v;
-    else audio.volume = v;
-  });
-
-  audio.addEventListener('waiting', () => { if (userWantsPlay) setStatus('buffering...'); });
-  audio.addEventListener('playing', () => { playing = true; updatePlayBtn(); setStatus(fxReady ? 'en vivo · fx' : 'en vivo'); });
-  audio.addEventListener('error', () => {
-    if (!userWantsPlay) return;
-    setStatus('sin CORS — probá ⟳ random');
-    playing = false; updatePlayBtn();
-  });
-
+  updateFilter(); controls.append(filter);
+  control('volume', 'VOL', 0, 1, 0.01, v => v === 0 ? '0% · silencio' : `${Math.round(v * 100)}%`);
+  control('delay', 'Eco / delay', 0, 4, 0.01, v => v ? `${Math.round(v * 1000)} ms` : 'Sin eco');
+  window.addEventListener('pagehide', () => player.stop());
   return card;
 }

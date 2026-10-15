@@ -20,7 +20,8 @@ const ARP_NOTE_DUR = { '4n': '8n', '8n': '16n', '16n': '32n' };
 const NOTE_ORDER = ['C4','D4','E4','F4','G4','A4','B4','C5','D5','E5'];
 
 export class PlayableSynth {
-  constructor() {
+  constructor({ masterNode = null } = {}) {
+    this._masterNode = masterNode;
     this.enabled = true;
     this.hold = true;
     this.mode = 'fm';
@@ -49,7 +50,8 @@ export class PlayableSynth {
     this._lfoRAF = null;
 
     this.filter = new Tone.Filter(this.filterFrequency, 'lowpass');
-    this.reverb = new Tone.Reverb({ decay: 6, wet: this.reverbWet }).toDestination();
+    const reverb = new Tone.Reverb({ decay: 6, wet: this.reverbWet });
+    this.reverb = masterNode ? reverb.connect(masterNode) : reverb.toDestination();
     this.reverb.generate();
     this.filter.connect(this.reverb);
     this._buildVoice();

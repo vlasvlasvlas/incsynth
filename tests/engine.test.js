@@ -42,7 +42,7 @@ async function harness() {
   const tone = { Transport, getContext: () => audioContext, now: () => now + 0.1, immediate: () => now, start: () => pendingStart || Promise.resolve(),
     Time: value => ({ toTicks: () => ({ '8n': 96, '16n': 48, '1m': 768, '4n': 192 }[value] || 96) }),
     Synth: Node, FMSynth: Node, AMSynth: Node, MembraneSynth: Node, PolySynth: Node,
-    Reverb: Node, Filter: Node, Gain: Node, Chorus: Node, PingPongDelay: Node, AutoFilter: Node,
+    Reverb: Node, Filter: Node, Gain: Node, Chorus: Node, PingPongDelay: Node, AutoFilter: Node, Limiter: Node,
   };
   const context = vm.createContext({ console, setTimeout, clearTimeout, structuredClone, Math: Object.create(Math) });
   const moduleOf = obj => new vm.SyntheticModule(Object.keys(obj), function() {

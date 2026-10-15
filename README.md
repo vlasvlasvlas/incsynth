@@ -47,8 +47,8 @@ La obra no consiste en convertir un dato directamente en una nota. Su centro es
 la convivencia: cada músico tiene autonomía, pero ninguna decisión ocurre de
 manera completamente aislada.
 
-- **Demo:** https://vlasvlasvlas.github.io/incysynth/
-- **Código:** https://github.com/vlasvlasvlas/incysynth
+- **Demo:** https://vlasvlasvlas.github.io/incsynth/
+- **Código:** https://github.com/vlasvlasvlas/incsynth
 
 ## El principio original de In C
 
@@ -568,7 +568,7 @@ npm run dev
 La aplicación queda disponible en:
 
 ```text
-http://localhost:5173/incysynth/
+http://localhost:5173/incsynth/
 ```
 
 Para generar la versión estática:
@@ -668,3 +668,16 @@ integración del motor con un doble de audio y persistencia del registro. Cubre
 cambios por tramos/azar, límites de frase, protección manual, descansos, coda,
 reinicios y liberación de recursos. `npm run build` verifica la compilación.
 Las pruebas simuladas no sustituyen una escucha completa en el equipo de destino.
+
+### Voces de LATAM
+
+En Conducción, **Play** agrega una única radio en vivo junto al ensamble.
+**Random** cambia de emisora; **Stop** detiene esa capa. VOL ajusta
+su volumen (cero silencia también el eco), una barra con dos controles recorta graves y agudos y Eco / delay mezcla la señal
+original con repeticiones. Los controles se conservan al cambiar de radio.
+
+Las fuentes usan HTTPS y permiten procesamiento de audio en el navegador. Si
+una conexión falla o deja de responder durante 12 segundos, se intenta otra;
+si ninguna conecta, se detiene y permite reintentar. La disponibilidad y la
+programación hablada dependen de cada emisora. Las pruebas de radio cubren
+cancelación, cambios rápidos, efectos y agotamiento de los intentos.

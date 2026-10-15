@@ -3,6 +3,7 @@ import { LaSala }            from './logic/LaSala.js';
 import { Instrumento }        from './logic/Instrumento.js';
 import { AudioEngine }        from './audio/Engine.js';
 import { PlayableSynth }      from './audio/PlayableSynth.js';
+import { masterBus }          from './audio/audioMaster.js';
 import { PRESETS, DEFAULTS }  from './audio/presets.js';
 import { OpenMeteoAdapter }   from './data-sources/OpenMeteoAdapter.js';
 import { CoinGeckoAdapter }   from './data-sources/CoinGeckoAdapter.js';
@@ -75,7 +76,8 @@ async function init() {
   const mercadoFuente  = new CoinGeckoAdapter();
   const noticiasFuente = new NewsRSSAdapter();
   const lenteFuente    = new WorldBankAdapter();
-  const playableSynth  = new PlayableSynth();
+  const audioMaster    = masterBus();
+  const playableSynth  = new PlayableSynth({ masterNode: audioMaster });
   climaFuente.start(); mercadoFuente.start(); noticiasFuente.start();
   setInterval(() => { climaFuente.tick(); mercadoFuente.tick(); noticiasFuente.tick(); }, 800);
 
@@ -228,7 +230,7 @@ async function init() {
     if (!engine) {
       // Bloquear doble-click durante la inicialización
       btnPlay.disabled = true;
-      engine = new AudioEngine(config, patrones, sala, instrumentos, () => {}, expression);
+      engine = new AudioEngine(config, patrones, sala, instrumentos, () => {}, expression, { masterNode: audioMaster });
       if (expression.ended) engine._newCycle();
       const startingEngine = engine;
       engine.onEnded = () => {

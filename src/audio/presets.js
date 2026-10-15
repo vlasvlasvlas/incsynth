@@ -12,11 +12,11 @@ export const PRESETS = {
     config: {
       harmonicity: 2,
       oscillator:  { type: 'triangle' },
-      envelope:    { attack: 0.18, decay: 0.1, sustain: 0.85, release: 2.5 },
+      envelope:    { attack: 0.25, decay: 0.1, sustain: 0.85, release: 2.5 },
       modulation:  { type: 'sine' },
-      modulationEnvelope: { attack: 0.25, decay: 0.1, sustain: 0.8, release: 2 },
+      modulationEnvelope: { attack: 0.35, decay: 0.1, sustain: 0.8, release: 2 },
     },
-    volume: -11,
+    volume: -16,
   },
 
   PAD: {
@@ -26,9 +26,9 @@ export const PRESETS = {
     tipo:   'PolySynth',
     config: {
       oscillator: { type: 'triangle8' },
-      envelope:   { attack: 0.32, decay: 0.2, sustain: 0.7, release: 4.0 },
+      envelope:   { attack: 0.55, decay: 0.2, sustain: 0.7, release: 4.0 },
     },
-    volume: -13,
+    volume: -18,
   },
 
   // ─ Ataques medios ─
@@ -38,10 +38,10 @@ export const PRESETS = {
     roles:  ['pad', 'melodico'],
     tipo:   'Synth',
     config: {
-      oscillator: { type: 'sine' },
+      oscillator: { type: 'triangle' },
       envelope:   { attack: 0.08, decay: 0.15, sustain: 0.75, release: 2.2 },
     },
-    volume: -9,
+    volume: -14,
   },
 
   ORGAN: {
@@ -53,7 +53,7 @@ export const PRESETS = {
       oscillator: { type: 'sawtooth' },
       envelope:   { attack: 0.06, decay: 0, sustain: 1, release: 0.3 },
     },
-    volume: -15,
+    volume: -20,
   },
 
   // ─ Ataques cortos / percusivos ─
@@ -85,7 +85,7 @@ export const PRESETS = {
       envelope:        { attack: 0.001, decay: 0.25, sustain: 0.02, release: 0.4 },
       modulationEnvelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.2 },
     },
-    volume: -8,
+    volume: -13,
   },
 
   MADERA: {
@@ -98,7 +98,7 @@ export const PRESETS = {
       octaves:    2,
       envelope:   { attack: 0.001, decay: 0.2, sustain: 0, release: 0.3 },
     },
-    volume: -7,
+    volume: -12,
   },
 
   PULSO_FM: {
@@ -114,7 +114,7 @@ export const PRESETS = {
       modulation: { type: 'square' },
       modulationEnvelope: { attack: 0.001, decay: 0.08, sustain: 0, release: 0.12 },
     },
-    volume: -10,
+    volume: -15,
   },
 
   METALICO: {
@@ -127,7 +127,7 @@ export const PRESETS = {
       octaves:    5,
       envelope:   { attack: 0.001, decay: 0.5, sustain: 0.01, release: 0.8 },
     },
-    volume: -9,
+    volume: -14,
   },
 
   // ─ Timbres especiales ─
@@ -145,7 +145,7 @@ export const PRESETS = {
       modulation:      { type: 'sine' },
       modulationEnvelope: { attack: 2.5, decay: 1.0, sustain: 0.5, release: 4.0 },
     },
-    volume: -10,
+    volume: -15,
   },
 
   SPACE_LADY: {
@@ -157,7 +157,7 @@ export const PRESETS = {
       oscillator: { type: 'triangle' },
       envelope:   { attack: 0.008, decay: 0.6, sustain: 0.35, release: 3.0 },
     },
-    volume: -15,
+    volume: -20,
   },
 
   // ─ Nuevos timbres para In C (basados en práctica de grabación) ─
@@ -168,14 +168,14 @@ export const PRESETS = {
     roles:  ['melodico'],
     tipo:   'FMSynth',
     config: {
-      harmonicity:     1.8,
-      modulationIndex: 2.5,
+      harmonicity:     3,
+      modulationIndex: 5,
       oscillator:      { type: 'sine' },
       envelope:        { attack: 0.10, decay: 0.35, sustain: 0.70, release: 3.8 },
       modulation:      { type: 'sine' },
       modulationEnvelope: { attack: 0.12, decay: 0.30, sustain: 0.50, release: 3.0 },
     },
-    volume: -11,
+    volume: -16,
   },
 
   VIBRAFONO: {
@@ -191,7 +191,7 @@ export const PRESETS = {
       modulation:      { type: 'sine' },
       modulationEnvelope: { attack: 0.001, decay: 0.5, sustain: 0, release: 2.0 },
     },
-    volume: -10,
+    volume: -15,
   },
 
   MORODER: {
@@ -206,7 +206,7 @@ export const PRESETS = {
       modulation:  { type: 'square' },
       modulationEnvelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.3 },
     },
-    volume: -12,
+    volume: -17,
   },
 
   THEREMIN: {
@@ -216,13 +216,13 @@ export const PRESETS = {
     tipo:   'FMSynth',
     config: {
       harmonicity:     1,
-      modulationIndex: 0.4,
+      modulationIndex: 1.8,
       oscillator:      { type: 'sine' },
       envelope:        { attack: 0.15, decay: 0, sustain: 1, release: 0.8 },
       modulation:      { type: 'sine' },
       modulationEnvelope: { attack: 0.3, decay: 0, sustain: 1, release: 0.5 },
     },
-    volume: -9,
+    volume: -14,
   },
 
   GAMELAN: {
@@ -238,7 +238,7 @@ export const PRESETS = {
       modulation:      { type: 'triangle' },
       modulationEnvelope: { attack: 0.001, decay: 0.6, sustain: 0, release: 1.5 },
     },
-    volume: -8,
+    volume: -13,
   },
 
   VOCODER: {
@@ -249,11 +249,11 @@ export const PRESETS = {
     config: {
       harmonicity: 0.5,
       oscillator:  { type: 'triangle8' },
-      envelope:    { attack: 0.22, decay: 0.1, sustain: 0.9, release: 2.0 },
+      envelope:    { attack: 0.30, decay: 0.1, sustain: 0.9, release: 2.0 },
       modulation:  { type: 'sine' },
-      modulationEnvelope: { attack: 0.35, decay: 0.1, sustain: 0.7, release: 2.0 },
+      modulationEnvelope: { attack: 0.55, decay: 0.1, sustain: 0.7, release: 2.0 },
     },
-    volume: -12,
+    volume: -17,
   },
 
   VANGELIS: {
@@ -279,13 +279,13 @@ export const PRESETS = {
         release: 3.5,
       },
     },
-    volume: -9,
+    volume: -14,
   },
 };
 
 export const DEFAULTS = {
   cuerdas:   'ARCO',
-  percusion: 'VANGELIS',
+  percusion: 'VIBRAFONO',
   melodia:   'OBOE',
   mallets:   'GAMELAN',
 };
