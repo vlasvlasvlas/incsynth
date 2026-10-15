@@ -5,12 +5,12 @@ export function buildIntervencionCard(instrumentos, callbacks = {}) {
   card.className = 'intervencion-card';
 
   const h = document.createElement('h3');
-  h.textContent = 'EMPUJAR LA SALA';
+  h.textContent = 'AVANZAR';
   card.appendChild(h);
 
   const status = document.createElement('div');
   status.className = 'intervencion-status';
-  status.textContent = 'sala autónoma';
+  status.textContent = 'autónomo';
 
   const grid = document.createElement('div');
   grid.className = 'intervencion-grid';

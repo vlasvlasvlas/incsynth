@@ -12,7 +12,7 @@ export function buildExpressionCard(expression, instruments, getEngine) {
   card.append(status);
   const note = document.createElement('p');
   note.className = 'expression-note';
-  note.textContent = 'Las voces conservan su identidad, descansan por frases y se relevan. Los timbres cambian al terminar una figura; no se saltan patrones.';
+  note.textContent = 'Controla descansos entre frases, cambios de timbre por tramo y coda final.';
   card.append(note);
 
   function row(label, input) {
