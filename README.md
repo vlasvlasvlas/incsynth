@@ -517,10 +517,12 @@ Incluye:
 ```text
 src/
 ├── audio/
+│   ├── audioMaster.js        Bus master compartido + limiter (-0.3 dBFS)
 │   ├── Engine.js             Secuenciación autónoma con Tone.js
-│   ├── raveCapture.js        Grabación de audio para corpus RAVE
 │   ├── PlayableSynth.js      Sintetizador manual 1–0
 │   ├── Pulse.js              Pulso compartido
+│   ├── RadioPlayer.js        Capa de radio LATAM (unificada al bus master)
+│   ├── raveCapture.js        Grabación de audio para corpus RAVE
 │   └── presets.js            Presets de síntesis
 ├── data/
 │   ├── config.json           Formación instrumental
@@ -619,6 +621,10 @@ Los controles de volumen, presets, síntesis y las capas IA existentes siguen
   tramos de reposo. El bombo sólo participa si el usuario lo habilitó.
 - **Espacio:** la reverberación se contiene con más voces activas y se abre con
   menor ocupación. Todos estos componentes pueden activarse por separado.
+- **Bus master unificado:** las tres voces, el pulso, el sintetizador acompañante
+  y la radio LATAM conviven en un mismo grafo de audio que termina en un limiter
+  a -0.3 dBFS. Protege de clipping en el clímax sin comprimir el programa y
+  evita que las capas pierdan presencia cuando se suman.
 
 ### Cambios de timbre
 
