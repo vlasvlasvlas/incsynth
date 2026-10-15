@@ -23,7 +23,7 @@ export class Instrumento {
     this._lastPayload        = '';
     this._lastDecision       = 'sin ciclo';
     this._verbos             = {};
-    this._volumenDb          = -18;
+    this._volumenDb          = -6;
     this._manualSignal       = 0;
     this._manualBlend        = 0;
     this._manualMuta         = 0;
