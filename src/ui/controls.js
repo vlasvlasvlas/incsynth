@@ -8,11 +8,6 @@ export function buildIntervencionCard(instrumentos, callbacks = {}) {
   h.textContent = 'EMPUJAR LA SALA';
   card.appendChild(h);
 
-  const note = document.createElement('div');
-  note.className = 'intervencion-note';
-  note.textContent = 'Durante la reproducción, pedí avanzar al terminar la figura. Repetir el clic no salta figuras.';
-  card.appendChild(note);
-
   const status = document.createElement('div');
   status.className = 'intervencion-status';
   status.textContent = 'sala autónoma';
@@ -28,7 +23,7 @@ export function buildIntervencionCard(instrumentos, callbacks = {}) {
       const moved = callbacks.onAdvance?.(id);
       status.textContent = moved === false
         ? `${inst._nombre || id}: iniciá la reproducción o esperá el avance pendiente`
-        : `${inst._nombre || id}: avanzará al terminar la figura`;
+        : `${inst._nombre || id}: avanzará al terminar el patrón`;
     });
     grid.appendChild(btn);
   }
@@ -43,7 +38,7 @@ export function buildIntervencionCard(instrumentos, callbacks = {}) {
   randomBtn.addEventListener('click', () => {
     const result = callbacks.onAdvanceRandom?.();
     status.textContent = result?.label
-      ? `${result.label}: avanzará al terminar la figura`
+      ? `${result.label}: avanzará al terminar el patrón`
       : 'ningún músico pudo avanzar';
   });
 
@@ -147,6 +142,57 @@ export function buildPlayableSynthCard(synth) {
     ['VOLUMEN', 'volume', -36, 0, 1, synth.volume, value => `${Math.round(value)}dB`],
   ];
 
+  // LFO sobre filtro
+  const lfoRow = document.createElement('div');
+  lfoRow.className = 'arp-row';
+  lfoRow.style.flexWrap = 'wrap';
+
+  const lfoToggle = document.createElement('button');
+  lfoToggle.type = 'button';
+  lfoToggle.textContent = 'LFO FILTRO';
+  lfoToggle.style.cssText = 'padding:0.22rem 0.5rem;font-size:0.56rem;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-family:var(--mono);cursor:pointer;letter-spacing:0.04em;';
+  lfoToggle.addEventListener('click', () => {
+    const on = !synth.lfoEnabled;
+    synth.setLfoEnabled(on);
+    lfoToggle.classList.toggle('active', on);
+    lfoToggle.style.background = on ? 'var(--fg)' : 'var(--bg)';
+    lfoToggle.style.color = on ? 'var(--bg)' : 'var(--muted)';
+  });
+
+  const lfoRateLabel = document.createElement('span');
+  lfoRateLabel.style.cssText = 'font-family:var(--mono);font-size:0.5rem;color:var(--muted);align-self:center;';
+  lfoRateLabel.textContent = 'VEL';
+
+  const lfoRateInput = document.createElement('input');
+  lfoRateInput.type = 'range'; lfoRateInput.min = 0.03; lfoRateInput.max = 8; lfoRateInput.step = 0.01; lfoRateInput.value = synth.lfoRate;
+  lfoRateInput.style.cssText = 'flex:1;min-width:60px;accent-color:var(--accent);';
+  const lfoRateVal = document.createElement('span');
+  lfoRateVal.style.cssText = 'font-family:var(--mono);font-size:0.5rem;color:var(--fg);min-width:32px;text-align:right;';
+  lfoRateVal.textContent = `${synth.lfoRate.toFixed(2)}Hz`;
+  lfoRateInput.addEventListener('input', () => {
+    const v = Number(lfoRateInput.value);
+    synth.setLfoRate(v);
+    lfoRateVal.textContent = `${v.toFixed(2)}Hz`;
+  });
+
+  const lfoDepthLabel = document.createElement('span');
+  lfoDepthLabel.style.cssText = 'font-family:var(--mono);font-size:0.5rem;color:var(--muted);align-self:center;';
+  lfoDepthLabel.textContent = 'PROF';
+
+  const lfoDepthInput = document.createElement('input');
+  lfoDepthInput.type = 'range'; lfoDepthInput.min = 50; lfoDepthInput.max = 5000; lfoDepthInput.step = 10; lfoDepthInput.value = synth.lfoDepth;
+  lfoDepthInput.style.cssText = 'flex:1;min-width:60px;accent-color:var(--accent);';
+  const lfoDepthVal = document.createElement('span');
+  lfoDepthVal.style.cssText = 'font-family:var(--mono);font-size:0.5rem;color:var(--fg);min-width:38px;text-align:right;';
+  lfoDepthVal.textContent = `±${synth.lfoDepth}Hz`;
+  lfoDepthInput.addEventListener('input', () => {
+    const v = Number(lfoDepthInput.value);
+    synth.setLfoDepth(v);
+    lfoDepthVal.textContent = `±${Math.round(v)}Hz`;
+  });
+
+  lfoRow.append(lfoToggle, lfoRateLabel, lfoRateInput, lfoRateVal, lfoDepthLabel, lfoDepthInput, lfoDepthVal);
+
   for (const [label, param, min, max, step, initial, format] of controls) {
     const row = document.createElement('label');
     row.className = 'playable-range';
@@ -174,6 +220,8 @@ export function buildPlayableSynthCard(synth) {
     row.appendChild(value);
     card.appendChild(row);
   }
+
+  card.appendChild(lfoRow);
 
   synth.subscribe(state => {
     power.classList.toggle('active', state.enabled);

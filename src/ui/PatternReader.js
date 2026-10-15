@@ -53,20 +53,11 @@ export class PatternReader {
     this.detailKey = null;
     container.classList.add('pattern-reader');
     const heading = element('div', 'pr-heading');
-    const intro = element('div');
-    intro.append(element('span', 'pr-eyebrow', 'ESCUCHAR LA PARTITURA'), element('h2', '', 'Tres voces, un mismo pulso'), element('p', 'pr-intro', 'Cada voz repite su figura y avanza a su tiempo. Seguí las notas mientras se encuentran.'));
     const tools = element('div', 'pr-tools');
-    const names = element('button', 'pr-names-toggle', 'Nombres de notas');
-    names.type = 'button';
-    names.setAttribute('aria-pressed', 'true');
-    names.addEventListener('click', () => {
-      const hidden = container.classList.toggle('pr-hide-names');
-      names.setAttribute('aria-pressed', String(!hidden));
-    });
     const source = element('span', 'pr-verification', '53 figuras · partitura cotejada');
     source.title = SCORE_STATUS.label;
-    tools.append(names, source);
-    heading.append(intro, tools);
+    tools.append(source);
+    heading.append(tools);
     this.grid = element('div', 'pr-cards');
     container.append(heading, this.grid);
     for (const [id, inst] of Object.entries(instrumentos)) {
@@ -85,7 +76,7 @@ export class PatternReader {
       const current = element('span', 'pr-now');
       const top = element('span', 'pr-card-top');
       top.append(name, position);
-      button.append(top, status, current, element('span', 'pr-open', 'Explorar figura ↗'));
+      button.append(top, status, current, element('span', 'pr-open', 'Explorar patrón ↗'));
       row.append(button, graphic);
       button.addEventListener('click', () => this.select(this.selected === id ? null : id));
       this.grid.append(row);
@@ -95,7 +86,7 @@ export class PatternReader {
     this.detail.id = 'pattern-reader-detail';
     this.detail.hidden = true;
     this.detail.setAttribute('tabindex', '-1');
-    this.detail.setAttribute('aria-label', 'Detalle de la figura en ejecución');
+    this.detail.setAttribute('aria-label', 'Detalle del patrón en ejecución');
     const detailTop = element('div', 'pr-detail-top');
     this.detailTitle = element('strong');
     const close = element('button', 'pr-close', 'Cerrar');
@@ -105,9 +96,9 @@ export class PatternReader {
     this.detailStatus = element('p', 'pr-detail-status');
     this.scroller = element('div', 'pr-scroll');
     this.scroller.tabIndex = 0;
-    this.scroller.setAttribute('aria-label', 'Figura completa; desplazar horizontalmente para explorar');
+    this.scroller.setAttribute('aria-label', 'Patrón completo; desplazar horizontalmente para explorar');
     this.eventList = element('ol', 'pr-event-list');
-    this.detail.append(detailTop, element('p', 'pr-help', 'Tiempo de la figura: el ancho indica la duración. Las ligaduras sostienen la nota sin volver a atacarla. Un pulso equivale a una negra.'), this.detailStatus, this.scroller, this.eventList);
+    this.detail.append(detailTop, element('p', 'pr-help', 'Tiempo del patrón: el ancho indica la duración. Las ligaduras sostienen la nota sin volver a atacarla. Un pulso equivale a una negra.'), this.detailStatus, this.scroller, this.eventList);
     container.append(this.detail);
     this.onKeydown = event => {
       if (event.key === 'Escape' && this.selected && container.contains(document.activeElement)) {
@@ -153,7 +144,7 @@ export class PatternReader {
     const notes = events.filter(e => e.note).map(e => pitch(e.note));
     const low = Math.min(60, ...notes), high = Math.max(72, ...notes);
     const svg = svgElement('svg', { viewBox: `0 0 ${width} ${height}`, role: 'img' });
-    svg.setAttribute('aria-label', `Figura ${index + 1}: ${events.length} eventos rítmicos. ${events.map(noteName).join(', ')}`);
+    svg.setAttribute('aria-label', `Patrón ${index + 1}: ${events.length} eventos rítmicos. ${events.map(noteName).join(', ')}`);
     if (large) svg.style.width = `${width}px`;
     const marks = [];
     for (const ev of events) {
@@ -177,7 +168,7 @@ export class PatternReader {
     const width = Math.max(360, events.at(-1).x + events.at(-1).width + 20);
     const svg = svgElement('svg', { viewBox: `0 0 ${width} 150`, role: 'img', class: 'pr-staff', preserveAspectRatio: 'xMinYMid meet' });
     svg.style.width = `${width}px`;
-    svg.setAttribute('aria-label', `Figura ${index + 1}: ${events.map(noteName).join(', ')}`);
+    svg.setAttribute('aria-label', `Patrón ${index + 1}: ${events.map(noteName).join(', ')}`);
     const line = (parent, x1, y1, x2, y2, cls = 'pr-staff-line') => parent.append(svgElement('line', {x1,y1,x2,y2,class:cls}));
     for (let y=52; y<=92; y+=10) line(svg, 12,y,width-12,y);
     const clef=svgElement('text',{x:14,y:91,class:'pr-clef'}); clef.textContent='𝄞'; svg.append(clef);
@@ -243,10 +234,10 @@ export class PatternReader {
       // A static preview is explicitly labelled; it never pretends to be playing.
       const index = actual ? state.patternIndex : Math.max(0, Math.min(this.patrones.length - 1, this.instrumentos[id].posicion || 0));
       const status = state.phase === 'suspended' ? PHASES.suspended : state.running ? (state.kind === 'rest' && state.phase === 'playing' ? 'Silencio escrito' : PHASES[state.phase] || 'Esperando') : state.phase === 'ended' ? 'Finalizado' : 'Detenido · vista previa';
-      card.position.textContent = `Figura ${String(index + 1).padStart(2, '0')}`;
+      card.position.textContent = `Patrón ${String(index + 1).padStart(2, '0')}`;
       card.current.textContent = state.running && state.phase === 'playing' ? (state.note ? scoreNoteName(state.note) + (state.kind === 'tie' ? ' · ligada' : state.kind === 'grace' ? ' · adorno' : '') : 'Silencio') : '—';
       card.status.textContent = status;
-      card.button.setAttribute('aria-label', `${this.instrumentos[id]._nombre || id}, figura ${index + 1}, ${status}. Ver lectura rítmica`);
+      card.button.setAttribute('aria-label', `${this.instrumentos[id]._nombre || id}, patrón ${index + 1}, ${status}. Ver lectura rítmica`);
       if (card.patternIndex !== index) {
         card.patternIndex = index;
         card.drawing = this.drawStaff(index);
@@ -264,7 +255,7 @@ export class PatternReader {
       const key = `${id}:${index}`;
       if (this.detailKey !== key) {
         this.detailKey = key;
-        this.detailTitle.textContent = `${this.instrumentos[id]._nombre || id} · figura ${index + 1} de ${this.patrones.length}`;
+        this.detailTitle.textContent = `${this.instrumentos[id]._nombre || id} · patrón ${index + 1} de ${this.patrones.length}`;
         this.detailDrawing = this.draw(index, true);
         this.scroller.replaceChildren(this.detailDrawing.svg);
         this.eventItems = this.score(index).events.map(ev => {
@@ -275,7 +266,7 @@ export class PatternReader {
         });
         this.eventList.replaceChildren(...this.eventItems.map(item => item.el));
       }
-      const pending = Number.isInteger(state.pendingPatternIndex) && state.pendingPatternIndex !== index ? ` · siguiente figura: ${state.pendingPatternIndex + 1}` : '';
+      const pending = Number.isInteger(state.pendingPatternIndex) && state.pendingPatternIndex !== index ? ` · siguiente patrón: ${state.pendingPatternIndex + 1}` : '';
       this.detailStatus.textContent = `${status}${state.running && Number.isFinite(state.cycle) ? ` · ciclo ${state.cycle}` : ''}${pending}`;
       this.paint(this.detailDrawing, state);
       for (const item of this.eventItems || []) {

@@ -8,7 +8,6 @@ import { OpenMeteoAdapter }   from './data-sources/OpenMeteoAdapter.js';
 import { CoinGeckoAdapter }   from './data-sources/CoinGeckoAdapter.js';
 import { NewsRSSAdapter }     from './data-sources/NewsRSSAdapter.js';
 import { WorldBankAdapter }   from './data-sources/WorldBankAdapter.js';
-import { CircleView }         from './ui/CircleView.js';
 import { PartituraView }      from './ui/PartituraView.js';
 import {
   buildLenteCard,
@@ -134,38 +133,12 @@ async function init() {
     return true;
   };
 
-  // ── Vistas Visuales ──
+  // ── Vista Visual ──
   const mainContainer = document.getElementById('circle-container');
-  const views = {
-    circle: new CircleView(mainContainer, instIds),
-    partitura: new PartituraView(mainContainer, instIds)
-  };
-  let currentViewId = window.matchMedia('(max-width: 820px)').matches ? 'circle' : 'partitura';
-
-  // Inicializar dejando solo el activo en el DOM
+  const partituraView = new PartituraView(mainContainer, instIds);
   mainContainer.innerHTML = '';
-  mainContainer.appendChild(views[currentViewId]._canvas);
-  views[currentViewId]._resize();
-  document.querySelectorAll('.view-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.view === currentViewId);
-  });
-
-  // Toggle de vistas
-  document.querySelectorAll('.view-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-      e.target.classList.add('active');
-      const viewId = e.target.dataset.view;
-      if (views[viewId]) {
-        // Limpiar canvas actual
-        mainContainer.innerHTML = '';
-        currentViewId = viewId;
-        // Re-adjuntar canvas de la nueva vista
-        mainContainer.appendChild(views[viewId]._canvas);
-        views[viewId]._resize();
-      }
-    });
-  });
+  mainContainer.appendChild(partituraView._canvas);
+  partituraView._resize();
 
   // ── Señales en sidebar ──
   const senalesEl    = document.getElementById('senales-strip');
@@ -181,7 +154,7 @@ async function init() {
   // ── Panel de control en sidebar ──
   let engine = null;
   const patternReader = new PatternReader(document.getElementById('pattern-reader'), instrumentos, patrones, () => engine);
-  const mapResize = new ResizeObserver(() => views[currentViewId]?._resize());
+  const mapResize = new ResizeObserver(() => partituraView._resize());
   mapResize.observe(mainContainer);
   const expression = new Expression(instIds);
   const primaryEl     = document.getElementById('panel-primary');
@@ -211,6 +184,8 @@ async function init() {
   }));
 
   primaryEl.appendChild(buildPlayableSynthCard(playableSynth));
+  const ritmoPanel = buildRitmoCard(() => engine);
+  primaryEl.appendChild(ritmoPanel.card);
   primaryEl.appendChild(salaPanelRoot);
 
   // Ciudad
@@ -241,9 +216,6 @@ async function init() {
   tableroEl.appendChild(expressionPanel.card);
   tableroEl.appendChild(sonidoPanel.card);
 
-  // BPM + Pulso
-  const ritmoPanel = buildRitmoCard(() => engine);
-  tableroEl.appendChild(ritmoPanel.card);
 
   // Botón play/stop unificado en header
   const btnPlay = document.getElementById('btn-detener');
@@ -299,6 +271,8 @@ async function init() {
 
   // ── Theme toggle (☾) ──
   const btnTheme = document.getElementById('btn-theme');
+  document.body.classList.add('dark-theme');
+  btnTheme.textContent = '☀';
   const syncThemeSurface = () => {
     const dark = document.body.classList.contains('dark-theme');
     const mainView = document.getElementById('main-view');
@@ -312,7 +286,7 @@ async function init() {
     document.body.classList.toggle('dark-theme');
     btnTheme.textContent = document.body.classList.contains('dark-theme') ? '☀' : '☾';
     syncThemeSurface();
-    views[currentViewId]?.render(instrumentos, sala);
+    partituraView.render(instrumentos, sala);
   });
 
   // ── Sidebar toggle (⚙) ──
@@ -377,9 +351,7 @@ async function init() {
 
   requestAnimationFrame(function loop() {
     tickIdleState();
-    if (views[currentViewId]) {
-      views[currentViewId].render(instrumentos, sala);
-    }
+    partituraView.render(instrumentos, sala);
     patternReader.update();
     requestAnimationFrame(loop);
   });
@@ -1153,7 +1125,7 @@ function createToneSynth(preset) {
 // ── BPM y volumen del pulso ──
 function buildRitmoCard(getEngine) {
   const card = document.createElement('div'); card.className = 'sonido-card ritmo-card';
-  const h = document.createElement('h3'); h.textContent = 'RITMO'; card.appendChild(h);
+  const h = document.createElement('h3'); h.textContent = 'RITMO ACOMPAÑANTE'; card.appendChild(h);
   const grid = document.createElement('div'); grid.className = 'ritmo-grid';
   card.appendChild(grid);
 
@@ -1222,39 +1194,54 @@ function buildRitmoCard(getEngine) {
   freqRow.appendChild(freqInput);
   grid.appendChild(freqRow);
 
-  // Volumen del pulso
-  const pulsoRow = document.createElement('div'); pulsoRow.className = 'ritmo-control ritmo-pulso-control';
-  const pulsoLbl = document.createElement('span'); pulsoLbl.className = 'lente-label'; pulsoLbl.textContent = 'PULSO';
-  const pulsoControl = document.createElement('div'); pulsoControl.className = 'ritmo-pulso-input';
-  const pulsoSlider = document.createElement('input');
-  pulsoSlider.type = 'range'; pulsoSlider.min = -60; pulsoSlider.max = 0; pulsoSlider.step = 1; pulsoSlider.value = -23;
-  pulsoSlider.setAttribute('aria-label', 'Volumen del golpe agudo (-60 = silencio)');
-  pulsoSlider.title = '-23 dB';
-  let kickEnabled = false;
-  const kickBtn = document.createElement('button');
-  kickBtn.type = 'button';
-  kickBtn.className = 'ritmo-kick-btn';
-  kickBtn.textContent = 'BOMBO';
-  kickBtn.title = 'Sumar bombo grave en negras';
-  kickBtn.setAttribute('aria-pressed', 'false');
-  pulsoSlider.addEventListener('input', () => {
-    const v = parseInt(pulsoSlider.value);
-    pulsoSlider.title = v <= -58 ? 'MUTE' : `${v} dB`;
-    const eng = getEngine();
-    if (eng?._pulse) eng._pulse.setVolume(v <= -58 ? -Infinity : v);
-  });
-  kickBtn.addEventListener('click', () => {
-    kickEnabled = !kickEnabled;
-    kickBtn.classList.toggle('active', kickEnabled);
-    kickBtn.setAttribute('aria-pressed', String(kickEnabled));
-    kickBtn.title = kickEnabled ? 'Quitar bombo grave' : 'Sumar bombo grave en negras';
-    getEngine()?._pulse?.setKickEnabled(kickEnabled);
-  });
-  pulsoControl.appendChild(pulsoSlider);
-  pulsoControl.appendChild(kickBtn);
-  pulsoRow.appendChild(pulsoLbl);
-  pulsoRow.appendChild(pulsoControl);
-  grid.appendChild(pulsoRow);
+  // PULSO (golpe agudo) — mute independiente + volumen
+  const makePulsoRow = (label, initMuted, onMute, onVol, volMin, volMax, volInit) => {
+    let muted = initMuted;
+    const row = document.createElement('div');
+    row.style.cssText = 'grid-column:1/-1;display:grid;grid-template-columns:52px 52px minmax(60px,120px);align-items:center;gap:0.45rem;';
+    const lbl = document.createElement('span'); lbl.className = 'lente-label'; lbl.textContent = label;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.style.cssText = 'font-family:var(--mono);font-size:0.52rem;height:28px;padding:0 0.5rem;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;letter-spacing:0.06em;white-space:nowrap;text-align:center;';
+    btn.textContent = 'MUTE';
+    if (initMuted) { btn.style.background = 'var(--fg)'; btn.style.color = 'var(--bg)'; }
+    btn.setAttribute('aria-pressed', String(initMuted));
+    const slider = document.createElement('input');
+    slider.type = 'range'; slider.min = volMin; slider.max = volMax; slider.step = 1; slider.value = volInit;
+    slider.style.cssText = 'width:100%;accent-color:var(--accent);';
+    btn.addEventListener('click', () => {
+      muted = !muted;
+      btn.setAttribute('aria-pressed', String(muted));
+      btn.style.background = muted ? 'var(--fg)' : 'var(--bg)';
+      btn.style.color = muted ? 'var(--bg)' : 'var(--fg)';
+      onMute(muted, Number(slider.value));
+    });
+    slider.addEventListener('input', () => { if (!muted) onVol(Number(slider.value)); });
+    row.append(lbl, btn, slider);
+    return { row, getSlider: () => slider, isMuted: () => muted };
+  };
+
+  // PULSO
+  let pulseMuted = true;
+  const pulsoSlider = { value: -23 };
+  const pulsoCtrl = makePulsoRow('PULSO', true,
+    (muted, v) => { pulseMuted = muted; getEngine()?._pulse?.setPulseVolume(muted ? -Infinity : v); },
+    v => getEngine()?._pulse?.setPulseVolume(v),
+    -60, 0, -23
+  );
+  pulsoCtrl.getSlider().addEventListener('input', () => { pulsoSlider.value = pulsoCtrl.getSlider().value; });
+  grid.appendChild(pulsoCtrl.row);
+
+  // BOMBO
+  let bomboMuted = true;
+  const bomboSlider = { value: -14 };
+  const bomboCtrl = makePulsoRow('BOMBO', true,
+    (muted, v) => { bomboMuted = muted; const eng = getEngine(); if (eng?._pulse) { eng._pulse.setKickEnabled(!muted); if (!muted) eng._pulse.setKickVolume(v); } },
+    v => getEngine()?._pulse?.setKickVolume(v),
+    -40, 0, -14
+  );
+  bomboCtrl.getSlider().addEventListener('input', () => { bomboSlider.value = bomboCtrl.getSlider().value; });
+  grid.appendChild(bomboCtrl.row);
 
   return {
     card,
@@ -1263,8 +1250,9 @@ function buildRitmoCard(getEngine) {
       engine.setBPM(bpmInput.value);
       engine._pulse?.setWaveform(timbreSel.value);
       engine._pulse?.setFrequency(freqInput.value);
-      engine._pulse?.setVolume(Number(pulsoSlider.value) <= -58 ? -Infinity : Number(pulsoSlider.value));
-      engine._pulse?.setKickEnabled(kickEnabled);
+      engine._pulse?.setPulseVolume(pulsoCtrl.isMuted() ? -Infinity : Number(pulsoCtrl.getSlider().value));
+      engine._pulse?.setKickEnabled(!bomboCtrl.isMuted());
+      if (!bomboCtrl.isMuted()) engine._pulse?.setKickVolume(Number(bomboCtrl.getSlider().value));
     },
   };
 }

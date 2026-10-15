@@ -42,6 +42,12 @@ export class PlayableSynth {
     this._arpIndex  = 0;
     this._arpEvent  = null;
 
+    this.lfoEnabled = false;
+    this.lfoRate = 0.3;
+    this.lfoDepth = 600;
+    this._lfoPhase = 0;
+    this._lfoRAF = null;
+
     this.filter = new Tone.Filter(this.filterFrequency, 'lowpass');
     this.reverb = new Tone.Reverb({ decay: 6, wet: this.reverbWet }).toDestination();
     this.reverb.generate();
@@ -107,13 +113,35 @@ export class PlayableSynth {
 
   setFilterFrequency(value) {
     this.filterFrequency = Number(value);
-    this.filter.frequency.rampTo(this.filterFrequency, 0.08);
+    if (!this.lfoEnabled) this.filter.frequency.value = this.filterFrequency;
   }
 
   setReverbWet(value) {
     this.reverbWet = Number(value);
     this.reverb.wet.rampTo(this.reverbWet, 0.12);
   }
+
+  setLfoEnabled(enabled) {
+    this.lfoEnabled = Boolean(enabled);
+    if (this.lfoEnabled) {
+      this._lfoPhase = 0;
+      const tick = () => {
+        if (!this.lfoEnabled) return;
+        this._lfoPhase += this.lfoRate / 60;
+        const mod = Math.sin(this._lfoPhase * Math.PI * 2) * this.lfoDepth;
+        this.filter.frequency.value = Math.max(20, this.filterFrequency + mod);
+        this._lfoRAF = requestAnimationFrame(tick);
+      };
+      this._lfoRAF = requestAnimationFrame(tick);
+    } else {
+      if (this._lfoRAF) { cancelAnimationFrame(this._lfoRAF); this._lfoRAF = null; }
+      this.filter.frequency.value = this.filterFrequency;
+    }
+  }
+
+  setLfoRate(value) { this.lfoRate = Number(value); }
+
+  setLfoDepth(value) { this.lfoDepth = Number(value); }
 
   setVolume(value) {
     this.volume = Number(value);
@@ -221,6 +249,7 @@ export class PlayableSynth {
     this.releaseAll();
     window.removeEventListener('keydown', this._onKeyDown);
     window.removeEventListener('keyup',   this._onKeyUp);
+    if (this._lfoRAF) { cancelAnimationFrame(this._lfoRAF); this._lfoRAF = null; }
     try { this.voice?.dispose();  } catch (_) {}
     try { this.filter?.dispose(); } catch (_) {}
     try { this.reverb?.dispose(); } catch (_) {}
