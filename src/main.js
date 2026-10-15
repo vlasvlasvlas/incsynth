@@ -252,7 +252,7 @@ async function init() {
       window._engine = null;
       btnPlay.textContent = '▶';
       btnPlay.classList.remove('playing');
-      btnPlay.title = 'Invocar';
+      btnPlay.title = 'Iniciar';
     }
   };
   btnPlay.addEventListener('click', doToggle);
@@ -583,22 +583,22 @@ function getRoomPressure(b) {
 
 function humanDecision(estado, motivo, closest) {
   const relation = closest ? `${closest.relation.text} con ${closest.name}` : 'sin relación cercana';
-  if (motivo === 'impacto') return `se mueve porque otro avance lo contagia; ${relation}`;
-  if (motivo === 'grupo') return `la sala lo arrastra hacia el grupo; ${relation}`;
-  if (motivo === 'huella') return `la huella del patrón todavía pesa; ${relation}`;
-  if (motivo === 'destrabe') return `abre espacio para no quedar pegado; ${relation}`;
-  if (motivo === 'momentum') return `sigue la corriente colectiva; ${relation}`;
-  if (motivo === 'dato externo') return `su mundo externo empuja; ${relation}`;
-  if (motivo === 'forma de la sala') return `la forma común cambió su decisión; ${relation}`;
-  if (motivo === 'escucha vecinal') return `ajusta su paso después de escuchar a los otros; ${relation}`;
-  if (motivo === 'secuencia') return `la repetición acumulada pide transformar el patrón; ${relation}`;
-  if (motivo === 'estilo temporal') return `el cuarto músico anticipa el estilo reciente; ${relation}`;
-  if (motivo === 'maduración') return `todavía habita y escucha este patrón; ${relation}`;
-  if (motivo === 'tiempo habitado') return `el tiempo acumulado habilita el avance; ${relation}`;
-  if (motivo === 'freno') return `se frena por alejarse demasiado; ${relation}`;
-  if (motivo === 'control manual') return `gesto del convocante altera su escucha; ${relation}`;
-  if (motivo === 'red social') return `la red de músicos lo presiona a moverse; ${relation}`;
-  if (motivo === 'escucha ambiente') return `el sonido del espacio modula su decisión; ${relation}`;
+  if (motivo === 'impacto') return `avance cercano reciente; ${relation}`;
+  if (motivo === 'grupo') return `cohesión con el grupo; ${relation}`;
+  if (motivo === 'huella') return `patrón saturado; ${relation}`;
+  if (motivo === 'destrabe') return `separación entre voces; ${relation}`;
+  if (motivo === 'momentum') return `momentum colectivo; ${relation}`;
+  if (motivo === 'dato externo') return `señal externa; ${relation}`;
+  if (motivo === 'forma de la sala') return `geometría del conjunto; ${relation}`;
+  if (motivo === 'escucha vecinal') return `posición relativa a vecinos; ${relation}`;
+  if (motivo === 'secuencia') return `repetición acumulada; ${relation}`;
+  if (motivo === 'estilo temporal') return `predicción de estilo; ${relation}`;
+  if (motivo === 'maduración') return `mínimo de permanencia no alcanzado; ${relation}`;
+  if (motivo === 'tiempo habitado') return `tiempo mínimo cumplido; ${relation}`;
+  if (motivo === 'freno') return `distancia excesiva al grupo; ${relation}`;
+  if (motivo === 'control manual') return `intervención manual; ${relation}`;
+  if (motivo === 'red social') return `presión de red; ${relation}`;
+  if (motivo === 'escucha ambiente') return `audio ambiente; ${relation}`;
   return `${estado}; ${relation}`;
 }
 
