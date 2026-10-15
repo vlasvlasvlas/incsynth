@@ -363,28 +363,27 @@ function buildSalaPanel(root, instIds, instrumentos, sala) {
 
   root.innerHTML = `
     <div class="sala-panel-head">
-      <span class="sala-panel-kicker">LA SALA ESCUCHA</span>
-      <span class="sala-panel-note">dos oídos: mundo externo + sala compartida</span>
+      <span class="sala-panel-kicker">SALA</span>
     </div>
     <div class="concept-grid">
       <div class="concept-card">
         <div class="concept-title">HUELLA</div>
-        <div class="concept-copy">Los patrones tocados dejan rastro. Esa memoria atrae, satura o destraba.</div>
+        <div class="concept-copy">Memoria de patrones tocados.</div>
         <div class="concept-meter"><span id="concept-huella"></span></div>
       </div>
       <div class="concept-card">
         <div class="concept-title">CONVIVENCIA</div>
-        <div class="concept-copy">Riley pide no alejarse demasiado. Cerca = escucha; lejos = tensión.</div>
+        <div class="concept-copy">Distancia entre voces.</div>
         <div class="concept-meter"><span id="concept-grupo"></span></div>
       </div>
       <div class="concept-card">
         <div class="concept-title">MOMENTUM</div>
-        <div class="concept-copy">Cuando alguien avanza, deja una corriente. Los demás pueden sentir ese arrastre.</div>
+        <div class="concept-copy">Corriente de avances recientes.</div>
         <div class="concept-meter"><span id="concept-momentum"></span></div>
       </div>
       <div class="concept-card">
         <div class="concept-title">FORMA</div>
-        <div class="concept-copy">El triángulo entre los músicos respira. Su quietud, expansión o contracción modifica la decisión.</div>
+        <div class="concept-copy">Geometría del conjunto.</div>
         <div class="concept-meter"><span id="concept-area"></span></div>
       </div>
     </div>
