@@ -211,7 +211,7 @@ export function buildPlayableSynthCard(synth) {
       if (['attack', 'decay', 'sustain', 'release'].includes(param)) synth.setEnvelope(param, n);
       if (param === 'filter') synth.setFilterFrequency(n);
       if (param === 'reverb') synth.setReverbWet(n);
-      if (param === 'volume') synth.setVolume(n);
+      if (param === 'volume') synth.setVolume(n <= -36 ? -Infinity : n);
     };
     input.addEventListener('input', apply);
     apply();
