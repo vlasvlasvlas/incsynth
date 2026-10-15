@@ -4,14 +4,18 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 // Voces: [0] cuerdas (rol:pad)  [1] percusion (rol:articulado)  [2] melodia (rol:melodico)
 // Cada preset en su posición respeta el rol del instrumento (ver presets.js campo 'roles').
 // Referencia: grabación CBS 1968 (cuerdas/pad + marimba-vibráfono + viento melódico).
+// Curva dinámica basada en análisis de patrones In C (Riley 1964):
+// grabaciones CBS 1968 / Bang on a Can 2008. Densidad real por zona de patrones.
 export const STAGES = [
-  { from: 1,  name: 'Apertura',           energy: 0.28, presets: ['FLAUTA',  'VIBRAFONO', 'OBOE'      ] },
-  { from: 7,  name: 'Primer desarrollo',  energy: 0.50, presets: ['ARCO',    'PIZZ',      'VANGELIS'  ] },
-  { from: 16, name: 'Meseta',             energy: 0.42, presets: ['PAD',     'VIBRAFONO', 'THEREMIN'  ] },
-  { from: 25, name: 'Despeje',            energy: 0.18, presets: ['FLAUTA',  'PIZZ',      'SPACE_LADY'] },
-  { from: 31, name: 'Segundo desarrollo', energy: 0.58, presets: ['ARCO',    'CAMPANA',   'OBOE'      ] },
-  { from: 41, name: 'Plenitud',           energy: 0.80, presets: ['VOCODER', 'GAMELAN',   'THEREMIN'  ] },
-  { from: 48, name: 'Resolución',         energy: 0.24, presets: ['PAD',     'VIBRAFONO', 'VANGELIS'  ] },
+  { from: 1,  name: 'Apertura',           energy: 0.22, presets: ['FLAUTA',  'VIBRAFONO', 'OBOE'      ] },
+  { from: 7,  name: 'Primer movimiento',  energy: 0.42, presets: ['ARCO',    'PIZZ',      'VANGELIS'  ] },
+  { from: 15, name: 'Remanso',            energy: 0.28, presets: ['PAD',     'VIBRAFONO', 'THEREMIN'  ] },
+  { from: 18, name: 'Escalera',           energy: 0.55, presets: ['ARCO',    'PIZZ',      'OBOE'      ] },
+  { from: 27, name: 'Consolidación',      energy: 0.48, presets: ['FLAUTA',  'CAMPANA',   'VANGELIS'  ] },
+  { from: 31, name: 'Segundo desarrollo', energy: 0.68, presets: ['ARCO',    'CAMPANA',   'OBOE'      ] },
+  { from: 36, name: 'Clímax',             energy: 0.82, presets: ['VOCODER', 'GAMELAN',   'THEREMIN'  ] },
+  { from: 41, name: 'Plenitud',           energy: 0.75, presets: ['PAD',     'GAMELAN',   'THEREMIN'  ] },
+  { from: 48, name: 'Disolución',         energy: 0.28, presets: ['PAD',     'VIBRAFONO', 'VANGELIS'  ] },
 ];
 export function createExpressionSettings() {
   return {
