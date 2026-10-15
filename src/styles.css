@@ -592,6 +592,49 @@ select.lente-sel:focus { outline: 1px solid var(--fg); }
   background: var(--fg);
   color: var(--bg);
 }
+.lente-btn {
+  height: 28px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lente-btn.active {
+  background: var(--fg);
+  color: var(--bg);
+}
+.lente-slider {
+  flex: 1;
+  height: 2px;
+  accent-color: var(--fg);
+  cursor: pointer;
+}
+.radio-station-display {
+  font-family: var(--mono);
+  font-size: 0.54rem;
+  color: var(--fg);
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.4rem;
+  min-height: 1.2em;
+}
+.radio-status {
+  font-family: var(--mono);
+  font-size: 0.46rem;
+  color: var(--muted);
+  display: block;
+  margin-top: 0.2rem;
+}
+.lente-card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
 .noticias-help {
   margin-bottom: 0.45rem;
   font-family: var(--mono);
