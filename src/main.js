@@ -1137,11 +1137,11 @@ function buildRitmoCard(getEngine) {
   bpmInput.min = '30';
   bpmInput.max = '180';
   bpmInput.step = '1';
-  bpmInput.value = '70';
+  bpmInput.value = '67';
   bpmInput.className = 'bpm-number-input';
   bpmInput.setAttribute('aria-label', 'Tempo en BPM');
   const applyBpm = raw => {
-    const v = Math.max(30, Math.min(180, Math.round(Number(raw) || 70)));
+    const v = Math.max(30, Math.min(180, Math.round(Number(raw) || 67)));
     bpmInput.value = String(v);
     const eng = getEngine();
     if (eng) eng.setBPM(v);
