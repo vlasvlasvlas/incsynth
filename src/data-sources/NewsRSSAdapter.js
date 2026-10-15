@@ -54,6 +54,60 @@ const NEWS_CATALOG = [
     ],
   },
   {
+    id: 'chile',
+    label: 'Chile',
+    feeds: [
+      {
+        id: 'emol',
+        name: 'Emol',
+        url: 'https://www.emol.com/rss/noticias.xml',
+      },
+    ],
+  },
+  {
+    id: 'brasil',
+    label: 'Brasil',
+    feeds: [
+      {
+        id: 'agencia-brasil',
+        name: 'Agência Brasil',
+        url: 'https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml',
+      },
+      {
+        id: 'g1',
+        name: 'G1 Globo',
+        url: 'https://g1.globo.com/rss/g1/',
+      },
+    ],
+  },
+  {
+    id: 'peru',
+    label: 'Perú',
+    feeds: [
+      {
+        id: 'elcomercio-pe',
+        name: 'El Comercio',
+        url: 'https://elcomercio.pe/feed/',
+      },
+      {
+        id: 'rpp',
+        name: 'RPP Noticias',
+        url: 'https://rpp.pe/rss',
+      },
+    ],
+  },
+  {
+    id: 'colombia',
+    label: 'Colombia',
+    feeds: [
+      {
+        id: 'eltiempo-co',
+        name: 'El Tiempo',
+        url: 'https://www.eltiempo.com/rss/colombia.xml',
+      },
+    ],
+  },
+  {
     id: 'usa',
     label: 'Estados Unidos',
     feeds: [
