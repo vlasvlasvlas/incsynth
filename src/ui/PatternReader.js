@@ -69,18 +69,17 @@ export class PatternReader {
       button.setAttribute('aria-controls', 'pattern-reader-detail');
       const name = element('strong', 'pr-name', inst._nombre || id);
       const position = element('span', 'pr-position');
-      const status = element('span', 'pr-status');
       const graphic = element('div', 'pr-mini');
       graphic.tabIndex = 0;
       graphic.setAttribute('aria-label', `Partitura de ${inst._nombre || id}; desplazar para ver figuras largas`);
       const current = element('span', 'pr-now');
       const top = element('span', 'pr-card-top');
       top.append(name, position);
-      button.append(top, status, current, element('span', 'pr-open', 'Explorar patrón ↗'));
+      button.append(top, current);
       row.append(button, graphic);
       button.addEventListener('click', () => this.select(this.selected === id ? null : id));
       this.grid.append(row);
-      this.cards.set(id, { button, position, status, graphic, current, patternIndex: null, drawing: null });
+      this.cards.set(id, { button, position, graphic, current, patternIndex: null, drawing: null, dwellMs: 0, lastTickMs: null });
     }
     this.detail = element('section', 'pr-detail');
     this.detail.id = 'pattern-reader-detail';
@@ -234,14 +233,22 @@ export class PatternReader {
       // A static preview is explicitly labelled; it never pretends to be playing.
       const index = actual ? state.patternIndex : Math.max(0, Math.min(this.patrones.length - 1, this.instrumentos[id].posicion || 0));
       const status = state.phase === 'suspended' ? PHASES.suspended : state.running ? (state.kind === 'rest' && state.phase === 'playing' ? 'Silencio escrito' : PHASES[state.phase] || 'Esperando') : state.phase === 'ended' ? 'Finalizado' : 'Detenido · vista previa';
-      card.position.textContent = `Patrón ${String(index + 1).padStart(2, '0')}`;
+      card.position.textContent = `Patrón ${String(index + 1).padStart(2, '0')} (${String(Math.floor((card.dwellMs ?? 0) / 1000)).padStart(2, '0')}s)`;
       card.current.textContent = state.running && state.phase === 'playing' ? (state.note ? scoreNoteName(state.note) + (state.kind === 'tie' ? ' · ligada' : state.kind === 'grace' ? ' · adorno' : '') : 'Silencio') : '—';
-      card.status.textContent = status;
       card.button.setAttribute('aria-label', `${this.instrumentos[id]._nombre || id}, patrón ${index + 1}, ${status}. Ver lectura rítmica`);
+      const now = performance.now();
+      const playing = state.running && state.phase === 'playing';
       if (card.patternIndex !== index) {
         card.patternIndex = index;
         card.drawing = this.drawStaff(index);
         card.graphic.replaceChildren(card.drawing.svg);
+        card.dwellMs = 0;
+        card.lastTickMs = playing ? now : null;
+      } else if (playing) {
+        if (card.lastTickMs !== null) card.dwellMs += now - card.lastTickMs;
+        card.lastTickMs = now;
+      } else {
+        card.lastTickMs = null;
       }
       this.paint(card.drawing, state);
       if (state.running && state.phase === 'playing' && card.lastEvent !== state.eventIndex) {

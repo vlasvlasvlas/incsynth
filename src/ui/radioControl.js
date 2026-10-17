@@ -1,6 +1,6 @@
 import { RADIO_STREAMS } from '../data/radioStreams.js';
 import { RadioPlayer } from '../audio/RadioPlayer.js';
-import { masterNative } from '../audio/audioMaster.js';
+import { radioInput } from '../audio/audioMaster.js';
 
 export function buildRadioCard() {
   const card = document.createElement('section');
@@ -26,7 +26,7 @@ export function buildRadioCard() {
     status.textContent = station
       ? `${state === 'loading' ? 'Conectando · ' : ''}${station.nombre} · ${station.pais}`
       : message || 'Lista para escuchar';
-  }, { masterNode: masterNative() });
+  }, { masterNode: radioInput() });
   play.setAttribute('aria-pressed', 'false');
   play.addEventListener('click', () => active ? player.stop() : player.start());
   next.addEventListener('click', () => player.start({ random: true }));

@@ -976,3 +976,86 @@ Apertura (1–6), Primer movimiento (7–14), Remanso (15–17), Escalera
 Los tests de `expression.test.js` siguen apuntando al esquema de 7 y
 dependen de `breaths` activo por default: fuera del alcance de hoy
 por decisión explícita del convocante.
+
+---
+
+## 2026-10-17 — Fix: la radio aplastaba a los músicos (3 cambios)
+
+### Síntoma
+Al prender la radio, los tres músicos se "mataban" en el mix. Al apagar
+la radio, el volumen seguía bajo durante varios segundos.
+
+### Diagnóstico
+El bus master unifica 3 voces + pulse + playable + radio en un único
+`Tone.Limiter(-0.3)`. La radio talk comercial llega con compresión de
+emisión agresiva (RMS ≈ pico), así que aun con su `volume: 0.26` linear,
+su contribución al sumatorio podía disparar el limiter. Cuando el
+`DynamicsCompressorNode` nativo de Web Audio aplica reducciones grandes
+y sostenidas, su envelope follower tarda varios segundos en soltar
+—mucho más que el `release` nominal— y eso explicaba la cola bajada
+después de parar la radio.
+
+### Cambios
+- **A — Default de volumen de radio**: `src/audio/RadioPlayer.js`
+  `volume: 0.26 → 0.10` (−20 dB). Default conservador para evitar
+  dominancia desde el primer play.
+- **B — Threshold del limiter**: `src/audio/audioMaster.js`
+  `Tone.Limiter(-0.3) → Tone.Limiter(-1.0)`. Deja respirar la mezcla
+  antes de que el limiter actúe.
+- **C — Etapa dedicada para la radio**: `src/audio/audioMaster.js`
+  nuevo `radioInput()` que expone un `Tone.Gain(0.2)` (techo −14 dBFS)
+  conectado al bus master. `src/ui/radioControl.js` instancia
+  `RadioPlayer` con `masterNode: radioInput()` en vez de `masterNative()`.
+  Techo de seguridad por diseño: aun con el VOL de la radio al 100%,
+  nunca puede dominar al ensamble ni forzar al limiter.
+
+### Nota de uso
+A y C se componen: VOL=0.10 (default) por detrás de un cap de 0.2 dan
+~-34 dB efectivo. El usuario puede subir el slider VOL de la radio sin
+riesgo porque C garantiza el techo.
+
+---
+
+## 2026-10-17 — Feature: contador de segundos por patrón en tarjetas de voz
+
+### Pedido
+Las tarjetas CUERDAS / PERCUSIÓN / MELODÍA mostraban "Patrón 14 /
+Interpretando / Si4" pero no cuánto tiempo lleva cada voz habitando
+ese patrón. El convocante quería ver *hace cuántos segundos* una voz
+está en el patrón actual para tener control del dwell en vivo (clave
+con las permanencias 30/46/74 s del modelo).
+
+### Cambio
+`src/ui/PatternReader.js`:
+- Constructor: nuevo span `pr-dwell` entre `status` y `current`.
+- `update()`: acumula `dwellMs` por tarjeta solo cuando `state.running
+  && state.phase === 'playing'`. Reset al cambiar de patrón. La pausa
+  por Stop no infla el contador.
+- Render: `"${N}s en este patrón"` o vacío si nunca sonó aún.
+
+`src/ui/pattern-reader.css`: estilo `.pr-dwell` en mono, discreto,
+color `--muted`.
+
+### Dónde se ve
+En cada tarjeta de voz, bajo "Interpretando" y arriba de la nota actual.
+
+---
+
+## 2026-10-17 — Refinamientos sobre lo del mediodía
+
+### UI tarjetas de voz: limpieza
+- Contador de dwell: pasó de línea separada a inline con el patrón:
+  `Patrón NN (NNs)`. Más fácil de leer, menos ruido vertical.
+- Se eliminó la línea "Interpretando / Esperando / etc" (`.pr-status`).
+- Se eliminó la línea "Explorar patrón ↗". La tarjeta sigue siendo
+  clickeable para abrir el detalle; sin texto de affordance.
+
+### Audio: ajustes finos
+- `audioMaster.js` `radioInput()` techo gain 0.2 → **0.35** (−14 → −9 dBFS).
+  Al 100% la radio queda audible sin dominar.
+- `main.js` BOMBO slider max 0 → **+6 dB**. El limiter a −1 dBFS protege
+  de clipping; el bombo ahora alcanza presencia física en sala.
+
+### Nota
+Todos los cambios aplicados vía HMR durante prueba en vivo con la radio
+y los músicos sonando.
