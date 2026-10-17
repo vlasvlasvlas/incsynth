@@ -1254,7 +1254,7 @@ function buildRitmoCard(getEngine) {
   const bomboCtrl = makePulsoRow('BOMBO', true,
     (muted, v) => { bomboMuted = muted; const eng = getEngine(); if (eng?._pulse) { eng._pulse.setKickEnabled(!muted); if (!muted) eng._pulse.setKickVolume(v); } },
     v => getEngine()?._pulse?.setKickVolume(v),
-    -40, 0, -14
+    -40, 6, -14
   );
   bomboCtrl.getSlider().addEventListener('input', () => { bomboSlider.value = bomboCtrl.getSlider().value; });
   grid.appendChild(bomboCtrl.row);

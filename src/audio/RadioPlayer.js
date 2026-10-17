@@ -6,7 +6,7 @@ export class RadioPlayer {
     // y conectamos la salida ahí en vez de a destination.
     this.masterNode = masterNode;
     this.createContext = masterNode ? () => masterNode.context : createContext;
-    this.settings = { highpass: 80, lowpass: 12000, delay: 0, volume: 0.26 };
+    this.settings = { highpass: 80, lowpass: 12000, delay: 0, volume: 0.10 };
     this.generation = 0;
     this.index = -1;
   }
