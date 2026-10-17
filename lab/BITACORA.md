@@ -904,3 +904,75 @@ Se conservan únicamente:
 
 También se eliminó la lógica `syncPresion` que dependía de GESTO/PRESIÓN.
 Cambio en `src/main.js`.
+
+---
+
+## 2026-10-17 — Catálogo de radios LATAM ampliado (3 → 21)
+
+### Problema
+`src/data/radioStreams.js` tenía solo 3 emisoras (Biobío, W Radio, CBN SP).
+Catálogo exiguo para una capa pensada como *voces de la zona* durante una
+interpretación de 40–50 minutos: repetía estaciones demasiado rápido y
+dejaba al oyente sin diversidad regional.
+
+### Decisión
+Priorizar **talk / noticias / AM** sobre música. La capa de radio aporta
+voz humana contra el tejido instrumental; emisoras musicales enmascararían
+la convivencia tímbrica de los tres músicos virtuales.
+
+### Cambio
+Agregadas 18 emisoras cubriendo Argentina, Uruguay, Paraguay, Chile, Perú,
+Colombia, Ecuador, México y Brasil. Todas talk/noticias. Formato preferido:
+StreamTheWorld (CORS predecible) e Icecast de la familia `dps.live` ya usada
+por Biobío.
+
+| País | Suma emisoras |
+|---|---|
+| Argentina | Mitre, Continental, La Red, Rivadavia |
+| Uruguay | Carve, Sarandí |
+| Paraguay | Cardinal |
+| Chile | Cooperativa, ADN |
+| Perú | RPP |
+| Colombia | Caracol, Blu, La FM |
+| Ecuador | Radio Quito |
+| México | Fórmula, MVS Noticias |
+| Brasil | CBN Rio, BandNews |
+
+### Advertencia operativa
+Las URLs son *best-effort* según patrones conocidos de StreamTheWorld y
+dps.live. Las que fallen (CORS, HLS encubierto, callsign distinto) serán
+salteadas automáticamente por `RadioPlayer.start()` cuando recorra el
+array. El usuario puede detectar y podar las que no respondan tras una
+sesión real de uso.
+
+### Próximo paso
+Verificación manual en navegador (DevTools → Network → confirmar response
+headers CORS). Las que no respondan en 12 s de timeout se podan del array.
+No se agrega fallback offline por decisión explícita del convocante.
+
+---
+
+## 2026-10-17 — README: tabla de etapas 7 → 9 (alineada con Expression.js)
+
+### Problema
+El README documentaba 7 etapas con nombres y presets del esquema anterior
+(Apertura / Primer desarrollo / Meseta / Despeje / Segundo desarrollo /
+Plenitud / Resolución), mientras que `src/audio/Expression.js` ya corría
+con 9 etapas desde el commit `863510d`.
+
+Esto confundía a cualquiera leyendo el README como fuente de verdad:
+los presets listados (Moroder, Space Lady) ya no estaban en la curva
+y los rangos de patrones (16–24, 25–30, 41–47) no coincidían con los
+pivots reales del motor.
+
+### Cambio
+`README.md` sección *Cambios de timbre* → tabla reemplazada por la curva
+real de 9 etapas tomada directamente de `STAGES` en `Expression.js`:
+Apertura (1–6), Primer movimiento (7–14), Remanso (15–17), Escalera
+(18–26), Consolidación (27–30), Segundo desarrollo (31–35), Clímax
+(36–40), Plenitud (41–47), Disolución (48–53).
+
+### Próximo paso
+Los tests de `expression.test.js` siguen apuntando al esquema de 7 y
+dependen de `breaths` activo por default: fuera del alcance de hoy
+por decisión explícita del convocante.
