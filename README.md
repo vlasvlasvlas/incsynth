@@ -648,13 +648,15 @@ El recorrido inicial es editable:
 
 | Patrones | Etapa | Cuerdas | Percusión | Melodía |
 |---|---|---|---|---|
-| 1–6 | Apertura | Flauta | Vangelis | Moroder |
-| 7–15 | Primer desarrollo | Arco | Pizzicato | Space Lady |
-| 16–24 | Meseta | Flauta | Vangelis | Theremin |
-| 25–30 | Despeje | Flauta | Pizzicato | Space Lady |
-| 31–40 | Segundo desarrollo | Arco | Campana | Moroder |
-| 41–47 | Plenitud | Vocoder | Gamelan | Moroder |
-| 48–53 | Resolución | Flauta | Vangelis | Theremin |
+| 1–6 | Apertura | Flauta | Vibráfono | Oboe |
+| 7–14 | Primer movimiento | Arco | Pizzicato | Vangelis |
+| 15–17 | Remanso | Pad | Vibráfono | Theremin |
+| 18–26 | Escalera | Arco | Pizzicato | Oboe |
+| 27–30 | Consolidación | Flauta | Campana | Vangelis |
+| 31–35 | Segundo desarrollo | Arco | Campana | Oboe |
+| 36–40 | Clímax | Vocoder | Gamelan | Theremin |
+| 41–47 | Plenitud | Pad | Gamelan | Theremin |
+| 48–53 | Disolución | Pad | Vibráfono | Vangelis |
 
 Cada voz sigue su propio patrón para cambiar timbre; el avance medio determina
 la etapa expresiva del conjunto. La permanencia mínima inicial es de 120 segundos,
