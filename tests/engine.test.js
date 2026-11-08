@@ -342,6 +342,30 @@ test('watchdog despierta canal estancado en DORMIDO tras varios ciclos en espera
   h.engine.dispose();
 });
 
+test('una excepción en decidirAvance no mata el canal: el próximo ciclo igual se agenda', async () => {
+  const h = await harness();
+  const inst = h.instruments.cuerdas;
+  let tirado = 0;
+  inst.decidirAvance = () => { tirado++; throw new Error('boom'); };
+  const originalError = console.error;
+  const errors = [];
+  console.error = (...args) => errors.push(args);
+  await h.engine.start();
+  // Primer ciclo (cuerdas en SONANDO toca patterns) y finishTick
+  for (let i = 0; i < 20; i++) {
+    const ticks = [...h.events.values()].filter(e => !e.repeat).map(e => e.tick).sort((a, b) => a - b);
+    if (ticks.length === 0) break;
+    h.runTick(ticks[0]);
+  }
+  console.error = originalError;
+  assert.ok(tirado > 0, 'decidirAvance debería haber sido invocado');
+  // El canal sigue produciendo attacks después de la excepción = se reagenda
+  const attacksAfter = h.engine.synths.cuerdas.attacks.length;
+  assert.ok(attacksAfter >= 2, `esperaba >= 2 attacks tras recuperarse, fueron ${attacksAfter}`);
+  assert.ok(errors.length > 0, 'debería haber logueado el error');
+  h.engine.dispose();
+});
+
 test('watchdog no se activa cuando el engine está parado', async () => {
   const h = await harness();
   const inst = h.instruments.melodia;

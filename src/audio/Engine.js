@@ -510,19 +510,26 @@ export class AudioEngine {
 
     const finishTick = startTick + durationTicks;
     this._scheduleAtTick(finishTick, finishTime => {
-      if (inst.posicion >= this.patrones.length) return;
-      // At 53 the voice waits for its partners, then all fade through the coda.
-      const waiting = inst.posicion === this.patrones.length - 1;
-      const requested = this._pendingAdvances[id];
-      delete this._pendingAdvances[id];
-      let avanzo = false;
-      if (!waiting && requested !== undefined) {
-        avanzo = inst.forzarAvance('gesto al terminar la figura');
-      } else if (!waiting && !phrase.rest) avanzo = inst.decidirAvance();
-      if (waiting || phrase.rest) inst.registrarEspera?.(waiting ? 'coda' : 'respiracion');
-      if (this.onCiclo) this.onCiclo(id, inst.posicion, avanzo, inst.getEstadoUI());
+      try {
+        if (inst.posicion >= this.patrones.length) return;
+        // At 53 the voice waits for its partners, then all fade through the coda.
+        const waiting = inst.posicion === this.patrones.length - 1;
+        const requested = this._pendingAdvances[id];
+        delete this._pendingAdvances[id];
+        let avanzo = false;
+        if (!waiting && requested !== undefined) {
+          avanzo = inst.forzarAvance('gesto al terminar la figura');
+        } else if (!waiting && !phrase.rest) avanzo = inst.decidirAvance();
+        if (waiting || phrase.rest) inst.registrarEspera?.(waiting ? 'coda' : 'respiracion');
+        if (this.onCiclo) this.onCiclo(id, inst.posicion, avanzo, inst.getEstadoUI());
+      } catch (err) {
+        // Nunca matar un canal por una excepción en el cierre de ciclo: loguear
+        // y seguir agendando. El watchdog es el fallback si el canal queda mal.
+        console.error('[engine] ciclo falló para', id, err);
+      }
       // El siguiente ciclo hereda el timestamp exacto del límite anterior.
-      this._runPatternCycle(id, finishTick, finishTime);
+      try { this._runPatternCycle(id, finishTick, finishTime); }
+      catch (err) { console.error('[engine] reagendado falló para', id, err); }
     }, id);
   }
 
