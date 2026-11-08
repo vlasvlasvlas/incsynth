@@ -226,6 +226,7 @@ export class AudioEngine {
       const originTick = Tone.Transport.state === 'started' ? Tone.Transport.ticks + this._notationToTicks('8n') : 0;
       if (Tone.Transport.state !== 'started') Tone.Transport.position = 0;
       Tone.Transport.bpm.value = this._lastBpm;
+      this._startedAtTick = originTick;
       this._schedulePulse();
 
       let idx = 0;
@@ -466,12 +467,28 @@ export class AudioEngine {
     if (!this._running) return;
     const inst = this.instrumentos[id];
     inst.tick();
-    const ui = inst.getEstadoUI();
+    let ui = inst.getEstadoUI();
 
     if (inst.posicion >= this.patrones.length) {
       this.expression.markSounding(id, false);
       return;
     }
+
+    // Primer minuto garantizado: si el canal está dormido en los primeros 60s
+    // de tocar, lo forzamos a ARMADO para que el oyente entre con las tres
+    // voces activas. Después, la señal manda.
+    if ((ui.estado === ESTADOS.DORMIDO || ui.estado === ESTADOS.ARMADO)
+        && typeof inst.despertar === 'function') {
+      const nowTicks = Tone.Transport.getTicksAtTime?.(this._audioNow()) ?? Tone.Transport.ticks;
+      const elapsedTicks = nowTicks - (this._startedAtTick ?? 0);
+      const bpm = Tone.Transport.bpm?.value || 70;
+      const elapsedSeconds = elapsedTicks / Tone.Transport.PPQ / (bpm / 60);
+      if (elapsedSeconds < 60) {
+        inst.despertar('primer minuto');
+        ui = inst.getEstadoUI();
+      }
+    }
+
     if (ui.estado === ESTADOS.DORMIDO || ui.estado === ESTADOS.ARMADO) {
       this.expression.markSounding(id, false);
       const endTick = startTick + this._notationToTicks('1m');

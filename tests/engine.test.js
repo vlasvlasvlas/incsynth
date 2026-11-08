@@ -321,6 +321,40 @@ test('natural end notification waits for the audible end before allowing disposa
   h.engine.dispose();
 });
 
+test('primer minuto garantizado: canal dormido se despierta en el primer ciclo', async () => {
+  const h = await harness();
+  const inst = h.instruments.melodia;
+  inst.estado = 'DORMIDO';
+  inst.despertados = [];
+  inst.despertar = function(motivo) {
+    this.despertados.push(motivo);
+    this.estado = 'SONANDO';
+  };
+  await h.engine.start();
+  // El primer ciclo de melodía (idx 2) está agendado a tick 2*96 = 192.
+  h.runTick(0);
+  h.runTick(96);
+  h.runTick(192);
+  assert.ok(inst.despertados.includes('primer minuto'),
+    `esperaba "primer minuto" en el primer ciclo. Despertados: ${JSON.stringify(inst.despertados)}`);
+  h.engine.dispose();
+});
+
+test('después del primer minuto, "primer minuto" NO vuelve a dispararse', async () => {
+  const h = await harness();
+  const inst = h.instruments.melodia;
+  inst.estado = 'DORMIDO';
+  const despertados = [];
+  inst.despertar = function(motivo) { despertados.push(motivo); this.estado = 'DORMIDO'; };
+  await h.engine.start();
+  // 60s a 70bpm = 60 × 192 × (70/60) = 13440 ticks. Vamos a 15000 para pasar bien.
+  h.setClock(15000);
+  h.engine._runPatternCycle('melodia', 15000, 15000 / 192);
+  assert.ok(!despertados.includes('primer minuto'),
+    `no debería disparar "primer minuto" tras los 60s. Disparó: ${JSON.stringify(despertados)}`);
+  h.engine.dispose();
+});
+
 test('watchdog despierta canal estancado en DORMIDO tras varios ciclos en espera', async () => {
   const h = await harness();
   const inst = h.instruments.melodia;
@@ -328,11 +362,9 @@ test('watchdog despierta canal estancado en DORMIDO tras varios ciclos en espera
   const despertados = [];
   inst.despertar = function(motivo) { despertados.push(motivo); this.estado = 'ARMADO'; };
   await h.engine.start();
-  // Drena todos los eventos del canal hasta que el watchdog dispare o agote
-  // 30 ciclos. Cada ciclo waiting agenda otro a 768 ticks adelante.
-  // Para que Melodía acumule 10 ciclos waiting (10 × 768 = 7680 ticks) hay que
-  // drenar también los eventos de los otros canales que corren en el medio.
-  for (let i = 0; i < 300 && despertados.length === 0; i++) {
+  // Drena eventos hasta que watchdog dispare, saltando los disparos de "primer minuto"
+  // que ocurren durante los primeros 60s. Límite generoso de iteraciones.
+  for (let i = 0; i < 500 && !despertados.includes('watchdog'); i++) {
     const ticks = [...h.events.values()].filter(e => !e.repeat).map(e => e.tick).sort((a, b) => a - b);
     if (ticks.length === 0) break;
     h.runTick(ticks[0]);
