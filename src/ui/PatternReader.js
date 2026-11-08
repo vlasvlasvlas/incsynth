@@ -76,11 +76,14 @@ export class PatternReader {
       const current = element('span', 'pr-now');
       const top = element('span', 'pr-card-top');
       top.append(name, position);
-      button.append(top, current);
+      const signalBar = element('div', 'pr-signal');
+      const signalFill = element('div', 'pr-signal-fill');
+      signalBar.append(signalFill);
+      button.append(top, current, signalBar);
       row.append(button, graphic);
       button.addEventListener('click', () => this.select(this.selected === id ? null : id));
       this.grid.append(row);
-      this.cards.set(id, { button, position, graphic, current, patternIndex: null, drawing: null, dwellMs: 0, lastTickMs: null });
+      this.cards.set(id, { button, position, graphic, current, signalFill, patternIndex: null, drawing: null, dwellMs: 0, lastTickMs: null });
     }
     this.detail = element('section', 'pr-detail');
     this.detail.id = 'pattern-reader-detail';
@@ -236,6 +239,11 @@ export class PatternReader {
       const status = state.phase === 'suspended' ? PHASES.suspended : state.running ? (state.kind === 'rest' && state.phase === 'playing' ? 'Silencio escrito' : PHASES[state.phase] || 'Esperando') : state.phase === 'ended' ? 'Finalizado' : 'Detenido · vista previa';
       card.position.textContent = `Patrón ${String(index + 1).padStart(2, '0')} (${String(Math.floor((card.dwellMs ?? 0) / 1000)).padStart(2, '0')}s)`;
       card.current.textContent = formatCardStatus(state).current;
+      if (card.signalFill) {
+        const mag = this.instrumentos[id].señal?.magnitud;
+        const pct = Math.max(0, Math.min(1, Number.isFinite(mag) ? mag : 0)) * 100;
+        card.signalFill.style.width = `${pct}%`;
+      }
       card.button.setAttribute('aria-label', `${this.instrumentos[id]._nombre || id}, patrón ${index + 1}, ${status}. Ver lectura rítmica`);
       const now = performance.now();
       const playing = state.running && state.phase === 'playing';

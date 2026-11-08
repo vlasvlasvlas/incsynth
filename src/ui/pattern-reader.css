@@ -49,6 +49,8 @@
 .pr-mark.pr-current { opacity:1; stroke:currentColor; stroke-width:2; }
 .pr-mark.pr-attack { fill:var(--accent); }
 .pr-cursor { stroke:var(--fg); stroke-width:1; opacity:.8; }
+.pr-signal { position:relative; height:3px; background:rgba(255,255,255,0.08); border-radius:2px; margin-top:10px; overflow:hidden; }
+.pr-signal-fill { height:100%; background:var(--voice-color, currentColor); opacity:.55; transition:width .35s ease; width:0; }
 .pr-event-list { list-style:none; display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:0; margin:12px 0 0; }
 .pr-event-list li { display:flex; flex-direction:column; gap:4px; padding:8px; border:1px solid var(--line); font-size:12px; }
 .pr-event-list small { font-size:10px; color:var(--muted); }
