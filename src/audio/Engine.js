@@ -484,7 +484,9 @@ export class AudioEngine {
       const bpm = Tone.Transport.bpm?.value || 70;
       const elapsedSeconds = elapsedTicks / Tone.Transport.PPQ / (bpm / 60);
       if (elapsedSeconds < 60) {
-        inst.despertar('primer minuto');
+        // "Primer minuto" es promesa fuerte: forzamos SONANDO directo para que
+        // el ciclo actual ya toque y no espere al próximo tick del state machine.
+        inst.despertar('primer minuto', ESTADOS.SONANDO);
         ui = inst.getEstadoUI();
       }
     }
@@ -544,6 +546,9 @@ export class AudioEngine {
         // y seguir agendando. El watchdog es el fallback si el canal queda mal.
         console.error('[engine] ciclo falló para', id, err);
       }
+      // Fin de partitura: no reagendar. El guard dentro del try hace return
+      // del bloque, no del callback — chequeo explícito acá tras el catch.
+      if (inst.posicion >= this.patrones.length) return;
       // El siguiente ciclo hereda el timestamp exacto del límite anterior.
       try { this._runPatternCycle(id, finishTick, finishTime); }
       catch (err) { console.error('[engine] reagendado falló para', id, err); }

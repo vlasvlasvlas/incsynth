@@ -321,6 +321,29 @@ test('natural end notification waits for the audible end before allowing disposa
   h.engine.dispose();
 });
 
+test('fin de partitura no dispara reagendado extra tras el último patrón (short-circuit en finishTick)', async () => {
+  const h = await harness();
+  // Partitura corta para saltar rápido, y decidirAvance que salta directo al fin.
+  h.engine.patrones = h.engine.patrones.slice(0, 3); // length=3
+  const inst = h.instruments.cuerdas;
+  inst.posicion = 0;
+  inst.decidirAvance = () => { inst.posicion = 3; return true; }; // fin de partitura
+  let ticks = 0;
+  inst.tick = () => { ticks++; };
+  await h.engine.start();
+  for (let i = 0; i < 20; i++) {
+    const events = [...h.events.values()].filter(e => !e.repeat && e.tick < 10000);
+    if (events.length === 0) break;
+    const minTick = Math.min(...events.map(e => e.tick));
+    h.runTick(minTick);
+  }
+  // Primer ciclo hace 1 tick(), decidirAvance lleva posición a 3 (fin).
+  // Antes del fix: try/catch perdía el short-circuit y llamaba _runPatternCycle
+  // de nuevo → otro tick(). Con el fix: exactamente 1.
+  assert.equal(ticks, 1, `esperaba exactamente 1 tick, hubo ${ticks}`);
+  h.engine.dispose();
+});
+
 test('primer minuto garantizado: canal dormido se despierta en el primer ciclo', async () => {
   const h = await harness();
   const inst = h.instruments.melodia;

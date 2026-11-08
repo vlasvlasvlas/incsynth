@@ -142,11 +142,14 @@ export class Instrumento {
     cuartoMusico.registrarCiclo(this.id, this, this.sala, false);
   }
 
-  despertar(motivo = 'watchdog') {
-    if (this.estado === ESTADOS.DORMIDO || this.estado === ESTADOS.ARMADO
-        || this.estado === ESTADOS.DESCANSANDO) {
-      this.estado = ESTADOS.ARMADO;
-    }
+  despertar(motivo = 'watchdog', estadoDestino = ESTADOS.ARMADO) {
+    // Red de seguridad: por default sube a ARMADO (próximo tick decide si
+    // vale entrar a SONANDO). Con estadoDestino=SONANDO el llamador fuerza
+    // la promesa "arranca sonando ya" — usado en el primer minuto.
+    const esAdormilado = this.estado === ESTADOS.DORMIDO
+      || this.estado === ESTADOS.ARMADO
+      || this.estado === ESTADOS.DESCANSANDO;
+    if (esAdormilado) this.estado = estadoDestino;
     this._ciclosSinActividad = 0;
     this._lastDecision = `DESPIERTA: ${motivo}`;
   }
