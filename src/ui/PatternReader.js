@@ -76,14 +76,15 @@ export class PatternReader {
       const current = element('span', 'pr-now');
       const top = element('span', 'pr-card-top');
       top.append(name, position);
+      const sourceLabel = element('div', 'pr-source');
       const signalBar = element('div', 'pr-signal');
       const signalFill = element('div', 'pr-signal-fill');
       signalBar.append(signalFill);
-      button.append(top, current, signalBar);
+      button.append(top, current, sourceLabel, signalBar);
       row.append(button, graphic);
       button.addEventListener('click', () => this.select(this.selected === id ? null : id));
       this.grid.append(row);
-      this.cards.set(id, { button, position, graphic, current, signalFill, patternIndex: null, drawing: null, dwellMs: 0, lastTickMs: null });
+      this.cards.set(id, { button, position, graphic, current, sourceLabel, signalFill, patternIndex: null, drawing: null, dwellMs: 0, lastTickMs: null });
     }
     this.detail = element('section', 'pr-detail');
     this.detail.id = 'pattern-reader-detail';
@@ -243,6 +244,10 @@ export class PatternReader {
         const mag = this.instrumentos[id].señal?.magnitud;
         const pct = Math.max(0, Math.min(1, Number.isFinite(mag) ? mag : 0)) * 100;
         card.signalFill.style.width = `${pct}%`;
+      }
+      if (card.sourceLabel) {
+        const raw = this.instrumentos[id].señal?.payloadText ?? '';
+        card.sourceLabel.textContent = raw.length > 80 ? raw.slice(0, 77) + '…' : raw;
       }
       card.button.setAttribute('aria-label', `${this.instrumentos[id]._nombre || id}, patrón ${index + 1}, ${status}. Ver lectura rítmica`);
       const now = performance.now();
