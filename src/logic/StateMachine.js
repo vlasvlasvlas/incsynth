@@ -24,7 +24,7 @@ export const TRANSICIONES = [
   {
     desde: ESTADOS.ARMADO,
     hacia: ESTADOS.SONANDO,
-    condicion: (ctx) => ctx.señal && ctx.señal.magnitud > ctx.umbrales.entrada,
+    condicion: (ctx) => ctx.señal && ctx.señal.magnitud >= ctx.umbrales.entrada,
   },
   {
     desde: ESTADOS.SONANDO,
@@ -53,7 +53,7 @@ export const TRANSICIONES = [
   {
     desde: ESTADOS.DESCANSANDO,
     hacia: ESTADOS.SONANDO,
-    condicion: (ctx) => ctx.señal && ctx.señal.magnitud > ctx.umbrales.entrada,
+    condicion: (ctx) => ctx.señal && ctx.señal.magnitud >= ctx.umbrales.entrada,
   },
   {
     desde: ESTADOS.SONANDO,

@@ -25,7 +25,9 @@ export class DataSourceAdapter {
       case 'MUTA':
         return clamp(this.volatilidad * mapeo.muta_escala, 0, 1);
       case 'SALE':
-        return this.magnitud < 0.08 ? 1 : 0;
+        // Rampa lineal: 1 en magnitud≤0.05, 0 en magnitud≥0.15, 0.5 en 0.10.
+        // Evita el disparo binario que creaba la trampa de SONANDO→DORMIDO prob=1.
+        return clamp((0.15 - this.magnitud) / 0.10, 0, 1);
       default:
         return 0;
     }
