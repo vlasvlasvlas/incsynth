@@ -29,6 +29,8 @@ export class AudioEngine {
     this._playback = {};
     this._pendingAdvances = {};
     this._endedAt = null;
+    this._waitingCycles = {};
+    this._watchdogThreshold = 10;
 
     // Reverb compartida contenida para mantener legible la grilla.
     // Si hay bus master compartido, el reverb va ahí (limiter real). Si no, destination.
@@ -474,9 +476,16 @@ export class AudioEngine {
       this.expression.markSounding(id, false);
       const endTick = startTick + this._notationToTicks('1m');
       this._recordPlayback(id, { patternIndex: inst.posicion, startTick, endTick, startTime, events: [], waiting: true });
+      this._waitingCycles[id] = (this._waitingCycles[id] ?? 0) + 1;
+      if (this._running && this._waitingCycles[id] >= this._watchdogThreshold
+          && typeof inst.despertar === 'function') {
+        inst.despertar('watchdog');
+        this._waitingCycles[id] = 0;
+      }
       this._schedulePatternCycle(id, endTick);
       return;
     }
+    this._waitingCycles[id] = 0;
     const phrase = this.expression.phrase(id, this.instrumentos, inst._presetKey, inst._autoTimbre !== false);
     if (phrase.preset && !this._pendingPresets[id]) this.cambiarPreset(id, phrase.preset, true);
     this._applyPendingPreset(id);

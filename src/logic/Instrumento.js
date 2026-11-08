@@ -142,6 +142,15 @@ export class Instrumento {
     cuartoMusico.registrarCiclo(this.id, this, this.sala, false);
   }
 
+  despertar(motivo = 'watchdog') {
+    if (this.estado === ESTADOS.DORMIDO || this.estado === ESTADOS.ARMADO
+        || this.estado === ESTADOS.DESCANSANDO) {
+      this.estado = ESTADOS.ARMADO;
+    }
+    this._ciclosSinActividad = 0;
+    this._lastDecision = `DESPIERTA: ${motivo}`;
+  }
+
   forzarAvance(motivo = 'empuje del convocante') {
     if (this.posicion >= this.sala.numPatrones - 1) return false;
     this.posicion++;

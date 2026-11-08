@@ -320,3 +320,37 @@ test('natural end notification waits for the audible end before allowing disposa
   assert.equal(ended,1);
   h.engine.dispose();
 });
+
+test('watchdog despierta canal estancado en DORMIDO tras varios ciclos en espera', async () => {
+  const h = await harness();
+  const inst = h.instruments.melodia;
+  inst.estado = 'DORMIDO';
+  const despertados = [];
+  inst.despertar = function(motivo) { despertados.push(motivo); this.estado = 'ARMADO'; };
+  await h.engine.start();
+  // Drena todos los eventos del canal hasta que el watchdog dispare o agote
+  // 30 ciclos. Cada ciclo waiting agenda otro a 768 ticks adelante.
+  // Para que Melodía acumule 10 ciclos waiting (10 × 768 = 7680 ticks) hay que
+  // drenar también los eventos de los otros canales que corren en el medio.
+  for (let i = 0; i < 300 && despertados.length === 0; i++) {
+    const ticks = [...h.events.values()].filter(e => !e.repeat).map(e => e.tick).sort((a, b) => a - b);
+    if (ticks.length === 0) break;
+    h.runTick(ticks[0]);
+  }
+  assert.ok(despertados.includes('watchdog'),
+    `watchdog nunca llamó despertar. Llamadas: ${JSON.stringify(despertados)}`);
+  h.engine.dispose();
+});
+
+test('watchdog no se activa cuando el engine está parado', async () => {
+  const h = await harness();
+  const inst = h.instruments.melodia;
+  inst.estado = 'DORMIDO';
+  const despertados = [];
+  inst.despertar = function(motivo) { despertados.push(motivo); };
+  await h.engine.start();
+  h.engine.stop();
+  for (let t = 0; t <= 20 * 768; t += 768) h.runTick(t);
+  assert.equal(despertados.length, 0, 'no debería despertar con engine parado');
+  h.engine.dispose();
+});
