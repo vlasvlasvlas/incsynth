@@ -286,6 +286,6 @@ export const PRESETS = {
 export const DEFAULTS = {
   cuerdas:   'ARCO',
   percusion: 'VIBRAFONO',
-  melodia:   'OBOE',
+  melodia:   'VANGELIS',
   mallets:   'GAMELAN',
 };
