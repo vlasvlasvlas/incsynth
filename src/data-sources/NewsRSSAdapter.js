@@ -393,7 +393,9 @@ export class NewsRSSAdapter extends DataSourceAdapter {
 
     const intensos = (conteo.conflicto || 0) + (conteo.muerte || 0) + (conteo.clima || 0);
     const prevMag = this.magnitud;
-    this.magnitud    = total > 0 ? clamp(intensos / Math.max(total, 5), 0, 1) : 0.3;
+    // Piso 0.20 cuando hay keywords matcheadas pero ninguna intensa: evita que
+    // Melodia caiga en SALE=1 cuando los titulares del dia no son dramaticos.
+    this.magnitud    = total > 0 ? clamp(intensos / Math.max(total, 5), 0.20, 1) : 0.3;
     this.cambio      = this.magnitud - prevMag;
     this.tendencia   = this.tendencia * 0.8 + this.cambio * 0.2;
     this.volatilidad = clamp(Object.values(conteo).filter(v => v > 0).length / 5, 0, 1);
