@@ -1,4 +1,5 @@
 import { compilePattern, noteName as scoreNoteName, noteMidi, SCORE_STATUS } from '../audio/score.js';
+import { formatCardStatus } from './cardStatus.js';
 import './pattern-reader.css';
 import { notationLayout } from './notation.js';
 
@@ -234,7 +235,7 @@ export class PatternReader {
       const index = actual ? state.patternIndex : Math.max(0, Math.min(this.patrones.length - 1, this.instrumentos[id].posicion || 0));
       const status = state.phase === 'suspended' ? PHASES.suspended : state.running ? (state.kind === 'rest' && state.phase === 'playing' ? 'Silencio escrito' : PHASES[state.phase] || 'Esperando') : state.phase === 'ended' ? 'Finalizado' : 'Detenido · vista previa';
       card.position.textContent = `Patrón ${String(index + 1).padStart(2, '0')} (${String(Math.floor((card.dwellMs ?? 0) / 1000)).padStart(2, '0')}s)`;
-      card.current.textContent = state.running && state.phase === 'playing' ? (state.note ? scoreNoteName(state.note) + (state.kind === 'tie' ? ' · ligada' : state.kind === 'grace' ? ' · adorno' : '') : 'Silencio') : '—';
+      card.current.textContent = formatCardStatus(state).current;
       card.button.setAttribute('aria-label', `${this.instrumentos[id]._nombre || id}, patrón ${index + 1}, ${status}. Ver lectura rítmica`);
       const now = performance.now();
       const playing = state.running && state.phase === 'playing';
